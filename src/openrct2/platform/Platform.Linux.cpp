@@ -21,6 +21,7 @@
 #include "../core/Path.hpp"
 #include "../core/Util.hpp"
 #include "../OpenRCT2.h"
+#include "../config/Config.h"
 #include "platform.h"
 #include "Platform2.h"
 
@@ -111,6 +112,8 @@ namespace Platform
 #ifdef __psp2__
         auto path = std::string("ux0:data/OpenRCT2");
 
+#else
+        auto path = std::string(gConfigGeneral.rct2_path);
 #endif
         if (!path.empty())
         {
