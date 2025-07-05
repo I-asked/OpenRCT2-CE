@@ -1,4 +1,77 @@
-# OpenRCT2
+# OpenRCT2-CE
+OpenRCT2 for consoles.
+
+## Currently available ports:
+- PSVita [installation](#installation-vita) [Control scheme](#control-scheme-vita) [Building](#building-vita)
+
+## installation vita:
+- Get data.zip and openrct2.vpk from the releases tab.
+- Extract data.zip into ux0:data (so that the folder structure is like this:)
+```
+ux0:data/
+  -- OpenRCT2/
+  -- -- g2.dat
+  -- -- OpenRCT2/
+  -- -- -- ....
+  -- -- language/
+  -- -- -- ....
+```
+- Get RollerCoaster Tycoon 2
+- Extract the files to ux0:data/RCT2 (so that the folder structure is like this:)
+```
+ux0:data/
+  -- RCT2/
+  -- -- Data/
+  -- -- ObjData/
+  -- -- Tracks/
+  ...
+```
+- Install the vpk
+- And launch the game (first boot could take up to 5 minutes)
+- Have fun!
+
+## Control scheme vita:
+- Cross: Left click
+- Square: Right click
+- Circle: Hold to speedup cursor
+- Triangle: Close all windows
+
+- Left stick: Move mouse cursor
+- DPAD: Move viewport around
+- Left shoulder button: Rotate view clockwise
+- Right shoulder button: Rotate view counter-clockwise
+- Start: Chat
+
+## Building vita
+(For developers, only linux as host system tested)
+- Install [vitasdk](https://vitasdk.org)
+- Install SDL2 and SDL2_image using `vdpm`
+- In the root of the project, run:
+```
+cmake -Bbuild . -DCMAKE_BUILD_TYPE=Release -DENABLE_LIGHTFX=ON -DDISABLE_HTTP_TWITCH=ON
+cd build
+make -j8
+./openrct2 sprite build g2.dat ../resources/g2/sprites.json
+
+cd ..
+cmake -Bbuild-vita -DCMAKE_BUILD_TYPE=Release -DDISABLE_NETWORK=OFF -DENABLE_LIGHTFX=ON -DDISABLE_HTTP_TWITCH=ON -DVITA=ON -DDISABLE_OPENGL=ON -DDISABLE_TTF=ON -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake .
+cd build-vita
+make -j8
+```
+- And you got the vpk in build-vita!
+
+## Changelog
+- Made sure ORCT2 compiles with latest GCC for both vita and Linux
+- Made sure OpenSSL 3.0 and older can be used to compile network support
+- Network support on PSVita
+- Fast loading due to native sceIo functions
+- Removed title sequence
+- Added vita/controller control scheme
+- Virtual mouse cursor with SDL
+- Reduced maximum tool size (e.g. Modify land tool)
+- Removed unused renderers on vita
+
+# OpenRCT2 Original readme
 An open-source re-implementation of RollerCoaster Tycoon 2. A construction and management simulation video game that simulates amusement park management.
 
 ---
