@@ -26,12 +26,19 @@ class NetworkPacket final
 {
 public:
     uint16                              Size = 0;
-    std::shared_ptr<std::vector<uint8>> Data = std::make_shared<std::vector<uint8>>();
+    std::vector<uint8>                  Data;
     size_t                              BytesTransferred = 0;
     size_t                              BytesRead = 0;
 
-    static std::unique_ptr<NetworkPacket> Allocate();
-    static std::unique_ptr<NetworkPacket> Duplicate(NetworkPacket& packet);
+    inline static std::unique_ptr<NetworkPacket> Allocate()
+    {
+        return std::make_unique<NetworkPacket>(); // change to make_unique in c++14
+    }
+
+    inline static std::unique_ptr<NetworkPacket> Duplicate(NetworkPacket &packet)
+    {
+        return std::make_unique<NetworkPacket>(packet); // change to make_unique in c++14
+    }
 
     uint8 * GetData();
     uint32  GetCommand();
@@ -64,7 +71,7 @@ public:
     NetworkPacket & operator <<(T value) {
         T swapped = ByteSwapBE(value);
         uint8 * bytes = (uint8 *)&swapped;
-        Data->insert(Data->end(), bytes, bytes + sizeof(value));
+        Data.insert(Data.end(), bytes, bytes + sizeof(value));
         return *this;
     }
 

@@ -19,26 +19,17 @@
 #include "NetworkTypes.h"
 #include "NetworkPacket.h"
 
-std::unique_ptr<NetworkPacket> NetworkPacket::Allocate()
-{
-    return std::unique_ptr<NetworkPacket>(new NetworkPacket); // change to make_unique in c++14
-}
-
-std::unique_ptr<NetworkPacket> NetworkPacket::Duplicate(NetworkPacket &packet)
-{
-    return std::unique_ptr<NetworkPacket>(new NetworkPacket(packet)); // change to make_unique in c++14
-}
 
 uint8 * NetworkPacket::GetData()
 {
-    return &(*Data)[0];
+    return Data.data();
 }
 
 uint32 NetworkPacket::GetCommand()
 {
-    if (Data->size() >= sizeof(uint32))
+    if (Data.size() >= sizeof(uint32))
     {
-        return ByteSwapBE(*(uint32 *)(&(*Data)[0]));
+        return ByteSwapBE(*(uint32 *)(Data.data()));
     }
     else
     {
@@ -50,7 +41,7 @@ void NetworkPacket::Clear()
 {
     BytesTransferred = 0;
     BytesRead = 0;
-    Data->clear();
+    Data.clear();
 }
 
 bool NetworkPacket::CommandRequiresAuth()
@@ -69,7 +60,7 @@ bool NetworkPacket::CommandRequiresAuth()
 
 void NetworkPacket::Write(const uint8 * bytes, size_t size)
 {
-    Data->insert(Data->end(), bytes, bytes + size);
+    Data.insert(Data.end(), bytes, bytes + size);
 }
 
 void NetworkPacket::WriteString(const utf8 * string)

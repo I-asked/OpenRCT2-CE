@@ -58,13 +58,13 @@ sint32 NetworkConnection::ReadPacket()
             {
                 return NETWORK_READPACKET_DISCONNECTED;
             }
-            InboundPacket.Data->resize(InboundPacket.Size);
+            InboundPacket.Data.resize(InboundPacket.Size);
         }
     }
     else
     {
         // read packet data
-        if (InboundPacket.Data->capacity() > 0)
+        if (InboundPacket.Data.capacity() > 0)
         {
             void * buffer = &InboundPacket.GetData()[InboundPacket.BytesTransferred - sizeof(InboundPacket.Size)];
             size_t bufferLength = sizeof(InboundPacket.Size) + InboundPacket.Size - InboundPacket.BytesTransferred;
@@ -92,7 +92,7 @@ bool NetworkConnection::SendPacket(NetworkPacket& packet)
     std::vector<uint8> tosend;
     tosend.reserve(sizeof(sizen) + packet.Size);
     tosend.insert(tosend.end(), (uint8*)&sizen, (uint8*)&sizen + sizeof(sizen));
-    tosend.insert(tosend.end(), packet.Data->begin(), packet.Data->end());
+    tosend.insert(tosend.end(), packet.Data.begin(), packet.Data.end());
 
     const void * buffer = &tosend[packet.BytesTransferred];
     size_t bufferSize = tosend.size() - packet.BytesTransferred;
@@ -108,7 +108,7 @@ void NetworkConnection::QueuePacket(std::unique_ptr<NetworkPacket> packet, bool 
 {
     if (AuthStatus == NETWORK_AUTH_OK || !packet->CommandRequiresAuth())
     {
-        packet->Size = (uint16)packet->Data->size();
+        packet->Size = (uint16)packet->Data.size();
         if (front)
         {
             // If the first packet was already partially sent add new packet to second position
