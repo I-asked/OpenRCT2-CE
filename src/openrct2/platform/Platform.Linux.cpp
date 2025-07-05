@@ -111,10 +111,9 @@ namespace Platform
         // 1. Try command line argument
 #ifdef __psp2__
         auto path = std::string("ux0:data/OpenRCT2");
-
+        return path;
 #else
-        auto path = std::string(gConfigGeneral.rct2_path);
-#endif
+        auto path = std::string("./tconfig/OpenRCT2/");
         if (!path.empty())
         {
             path = Path::GetAbsolute(path);
@@ -145,6 +144,7 @@ namespace Platform
             }
         }
         return path;
+#endif
     }
 
     std::string GetCurrentExecutablePath()
