@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <openrct2/common.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <openrct2/config/Config.h>
 #include <openrct2/core/Guard.hpp>
 #include <openrct2/drawing/IDrawingEngine.h>
@@ -35,6 +36,7 @@ private:
     IUiContext * const  _uiContext;
     SDL_Window *        _window         = nullptr;
     SDL_Surface *       _surface        = nullptr;
+    SDL_Surface *       _cursor        = nullptr;
     SDL_Surface *       _RGBASurface    = nullptr;
     SDL_Palette *       _palette        = nullptr;
 
@@ -44,11 +46,18 @@ public:
           _uiContext(uiContext)
     {
         _window = (SDL_Window *)_uiContext->GetWindow();
+#ifdef __psp2__
+        _cursor = IMG_Load("app0:cursor.png");
+#else
+        _cursor = nullptr;
+#endif
     }
 
     ~SoftwareDrawingEngine() override
     {
         SDL_FreeSurface(_surface);
+        if (_cursor)
+            SDL_FreeSurface(_cursor);
         SDL_FreeSurface(_RGBASurface);
         SDL_FreePalette(_palette);
     }
@@ -132,11 +141,17 @@ private:
         if (gConfigGeneral.window_scale == 1 || gConfigGeneral.window_scale <= 0)
         {
             SDL_Surface * windowSurface = SDL_GetWindowSurface(_window);
+           
             if (SDL_BlitSurface(_surface, nullptr, windowSurface, nullptr))
             {
                 log_fatal("SDL_BlitSurface %s", SDL_GetError());
                 exit(1);
             }
+            SDL_Rect r;
+            r.x = _uiContext->GetCursorState()->abs_x;
+            r.y = _uiContext->GetCursorState()->abs_y;
+            if (_cursor)
+                SDL_BlitSurface(_cursor, nullptr, windowSurface, &r);
         }
         else
         {
@@ -149,7 +164,7 @@ private:
 
             // then scale to window size. Without changing to RGBA first, SDL complains
             // about blit configurations being incompatible.
-            if (SDL_BlitScaled(_RGBASurface, nullptr, SDL_GetWindowSurface(_window), nullptr))
+            if (SDL_BlitScaled(_surface, nullptr, SDL_GetWindowSurface(_window), nullptr))
             {
                 log_fatal("SDL_BlitScaled %s", SDL_GetError());
                 exit(1);

@@ -14,14 +14,14 @@
  *****************************************************************************/
 #pragma endregion
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__)
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__) || defined(__psp2__)
 
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fnmatch.h>
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__psp2__)
     #include <fts.h>
 #endif
 #include <libgen.h>
@@ -99,7 +99,11 @@ void platform_get_time_local(rct2_time *out_time)
 static size_t platform_utf8_to_multibyte(const utf8 *path, char *buffer, size_t buffer_size)
 {
     wchar_t *wpath = utf8_to_widechar(path);
-    setlocale(LC_CTYPE, "UTF-8");
+#ifdef __psp2__
+    memset(buffer, 0, buffer_size);
+    strcpy(buffer, path);
+    return strlen(buffer);
+#endif
     size_t len = wcstombs(NULL, wpath, 0);
     bool truncated = false;
     if (len > buffer_size - 1) {
@@ -152,9 +156,13 @@ bool platform_original_game_data_exists(const utf8 *path)
 // "a vaporware GNU extension".
 static mode_t openrct2_getumask()
 {
+#ifdef __psp2__
+    return 511;
+#else
     mode_t mask = umask(0);
     umask(mask);
     return 0777 & ~mask; // Keep in mind 0777 is octal
+#endif
 }
 
 bool platform_ensure_directory_exists(const utf8 *path)
@@ -406,6 +414,9 @@ time_t platform_file_get_modified_time(const utf8* path){
 
 uint8 platform_get_locale_temperature_format(){
 // LC_MEASUREMENT is GNU specific.
+#ifdef __psp2__
+    return TEMPERATURE_FORMAT_C;
+#else
 #ifdef LC_MEASUREMENT
     const char *langstring = setlocale(LC_MEASUREMENT, "");
 #else
@@ -422,6 +433,7 @@ uint8 platform_get_locale_temperature_format(){
         }
     }
     return TEMPERATURE_FORMAT_C;
+#endif
 }
 
 uint8 platform_get_locale_date_format()
@@ -444,6 +456,9 @@ datetime64 platform_get_datetime_now_utc()
 }
 
 utf8* platform_get_username() {
+#ifdef __psp2__
+    return nullptr;
+#else
     struct passwd* pw = getpwuid(getuid());
 
     if (pw) {
@@ -451,11 +466,12 @@ utf8* platform_get_username() {
     } else {
         return nullptr;
     }
+#endif
 }
 
 bool platform_process_is_elevated()
 {
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__psp2__)
    return (geteuid() == 0);
 #else
    return false;

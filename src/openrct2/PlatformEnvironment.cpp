@@ -16,6 +16,8 @@
 
 #include "config/Config.h"
 #include "core/Path.hpp"
+#include "core/FileStream.hpp"
+#include "core/Zip.h"
 #include "core/String.hpp"
 #include "OpenRCT2.h"
 #include "platform/platform.h"
@@ -28,6 +30,7 @@ class PlatformEnvironment final : public IPlatformEnvironment
 {
 private:
     std::string _basePath[DIRBASE_COUNT];
+    IZipArchive * zip;
 
 public:
     explicit PlatformEnvironment(DIRBASE_VALUES basePaths)
@@ -38,6 +41,11 @@ public:
         }
     }
 
+    IZipArchive * GetZip() override
+    {
+        return zip;
+    }
+    
     std::string GetDirectoryPath(DIRBASE base) const override
     {
         return _basePath[(size_t)base];

@@ -34,12 +34,16 @@ namespace Platform
         case SPECIAL_FOLDER::USER_CONFIG:
         case SPECIAL_FOLDER::USER_DATA:
             {
+#ifdef __psp2__
+                auto path = "ux0:data/OpenRCT2";
+#else
                 auto path = GetEnvironmentPath("XDG_CONFIG_HOME");
                 if (path.empty())
                 {
                     auto home = GetFolderPath(SPECIAL_FOLDER::USER_HOME);
                     path = Path::Combine(home, ".config");
                 }
+#endif
                 return path;
             }
         case SPECIAL_FOLDER::USER_HOME:
@@ -104,7 +108,10 @@ namespace Platform
     std::string GetInstallPath()
     {
         // 1. Try command line argument
-        auto path = std::string(gCustomOpenrctDataPath);
+#ifdef __psp2__
+        auto path = std::string("ux0:data/OpenRCT2");
+
+#endif
         if (!path.empty())
         {
             path = Path::GetAbsolute(path);

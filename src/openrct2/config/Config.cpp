@@ -89,9 +89,13 @@ namespace Config
 
     static const auto Enum_DrawingEngine = ConfigEnum<sint32>(
     {
+#ifndef __psp2__
         ConfigEnumEntry<sint32>("SOFTWARE", DRAWING_ENGINE_SOFTWARE),
+#endif
         ConfigEnumEntry<sint32>("SOFTWARE_HWD", DRAWING_ENGINE_SOFTWARE_WITH_HARDWARE_DISPLAY),
+#ifndef __psp2__
         ConfigEnumEntry<sint32>("OPENGL", DRAWING_ENGINE_OPENGL),
+#endif
     });
 
     static const auto Enum_Temperature = ConfigEnum<sint32>(
@@ -166,7 +170,7 @@ namespace Config
             model->window_snap_proximity = reader->GetSint32("window_snap_proximity", 5);
             model->window_width = reader->GetSint32("window_width", -1);
             model->default_display = reader->GetSint32("default_display", 0);
-            model->drawing_engine = reader->GetEnum<sint32>("drawing_engine", DRAWING_ENGINE_SOFTWARE, Enum_DrawingEngine);
+            model->drawing_engine = reader->GetEnum<sint32>("drawing_engine", DRAWING_ENGINE_SOFTWARE_WITH_HARDWARE_DISPLAY, Enum_DrawingEngine);
             model->uncap_fps = reader->GetBoolean("uncap_fps", false);
             model->use_vsync = reader->GetBoolean("use_vsync", true);
             model->use_virtual_floor = reader->GetBoolean("use_virtual_floor", true);
@@ -602,6 +606,9 @@ namespace Config
      */
     static std::string FindRCT2Path()
     {
+#ifdef __psp2__
+        return "ux0:data/RCT2";
+#endif
         log_verbose("config_find_rct2_path(...)");
 
         static constexpr const utf8 * searchLocations[] =

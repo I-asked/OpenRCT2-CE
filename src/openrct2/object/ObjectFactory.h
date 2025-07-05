@@ -17,12 +17,13 @@
 #pragma once
 
 #include "../common.h"
+#include "../core/Zip.h"
 
 class Object;
 
 namespace ObjectFactory
 {
-    Object * CreateObjectFromLegacyFile(const utf8 * path);
+    Object * CreateObjectFromLegacyFile(const utf8 * path, IZipArchive * zip);
     Object * CreateObjectFromLegacyData(const rct_object_entry * entry, const void * data, size_t dataSize);
     Object * CreateObject(const rct_object_entry &entry);
 }

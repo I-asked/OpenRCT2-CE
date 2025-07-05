@@ -14,6 +14,7 @@
  *****************************************************************************/
 #pragma endregion
 
+#include <stdexcept>
 #include <memory>
 #include "../common.h"
 #include "../Context.h"

@@ -17,9 +17,11 @@
 #ifndef DISABLE_NETWORK
 
 #include <vector>
+#include <string>
+#include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
-#include <openssl/rsa.h>
+#include <openssl/err.h>
 
 #include "../core/IStream.hpp"
 #include "../Diagnostic.h"
@@ -91,213 +93,187 @@ bool NetworkKey::Generate()
     return true;
 }
 
-bool NetworkKey::LoadPrivate(IStream * stream)
+bool NetworkKey::LoadPrivate(IStream *stream)
 {
     Guard::ArgumentNotNull(stream);
-
-    size_t size = (size_t)stream->GetLength();
-    if (size == (size_t)-1)
-    {
+    long ssize = stream->GetLength();
+    if (ssize < 0) {
         log_error("unknown size, refusing to load key");
         return false;
     }
-    else if (size > 4 * 1024 * 1024)
-    {
+    if (ssize > 4 * 1024 * 1024) {
         log_error("Key file suspiciously large, refusing to load it");
         return false;
     }
-    char * priv_key = new char[size];
-    stream->Read(priv_key, size);
-    BIO * bio = BIO_new_mem_buf(priv_key, (sint32)size);
-    if (bio == nullptr)
-    {
-        log_error("Failed to initialise OpenSSL's BIO!");
-        delete [] priv_key;
+    std::vector<unsigned char> buf(static_cast<size_t>(ssize));
+    stream->Read(buf.data(), ssize);
+    BIO *bio = BIO_new_mem_buf(buf.data(), static_cast<int>(ssize));
+    if (!bio) {
+        log_error("Failed to create BIO");
         return false;
     }
-    RSA * rsa;
-    rsa = PEM_read_bio_RSAPrivateKey(bio, nullptr, nullptr, nullptr);
-    if (rsa == nullptr || !RSA_check_key(rsa))
-    {
-        log_error("Loaded RSA key is invalid");
-        BIO_free_all(bio);
-        delete [] priv_key;
+    EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
+    if (!pkey) {
+        BIO_reset(bio);
+        pkey = d2i_PrivateKey_bio(bio, nullptr);
+    }
+    BIO_free(bio);
+    if (!pkey) {
+        unsigned long err = ERR_get_error();
+        char msg[256];
+        ERR_error_string_n(err, msg, sizeof(msg));
+        log_error("OpenSSL failed to parse private key: %s", msg);
         return false;
     }
-    if (_key != nullptr)
-    {
-        EVP_PKEY_free(_key);
-    }
-    _key = EVP_PKEY_new();
-    EVP_PKEY_set1_RSA(_key, rsa);
-    BIO_free_all(bio);
-    RSA_free(rsa);
-    delete [] priv_key;
-    return true;
-}
-
-bool NetworkKey::LoadPublic(IStream * stream)
-{
-    Guard::ArgumentNotNull(stream);
-
-    size_t size = (size_t)stream->GetLength();
-    if (size == (size_t)-1)
-    {
-        log_error("unknown size, refusing to load key");
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new(pkey, nullptr);
+    if (!pctx || EVP_PKEY_check(pctx) <= 0) {
+        log_error("Invalid private key");
+        if (pctx) EVP_PKEY_CTX_free(pctx);
+        EVP_PKEY_free(pkey);
         return false;
     }
-    else if (size > 4 * 1024 * 1024)
-    {
-        log_error("Key file suspiciously large, refusing to load it");
-        return false;
-    }
-    char * pub_key = new char[size];
-    stream->Read(pub_key, size);
-    BIO * bio = BIO_new_mem_buf(pub_key, (sint32)size);
-    if (bio == nullptr)
-    {
-        log_error("Failed to initialise OpenSSL's BIO!");
-        delete [] pub_key;
-        return false;
-    }
-    RSA * rsa;
-    rsa = PEM_read_bio_RSAPublicKey(bio, nullptr, nullptr, nullptr);
-    if (_key != nullptr)
-    {
-        EVP_PKEY_free(_key);
-    }
-    _key = EVP_PKEY_new();
-    EVP_PKEY_set1_RSA(_key, rsa);
-    BIO_free_all(bio);
-    RSA_free(rsa);
-    delete [] pub_key;
-    return true;
-}
-
-bool NetworkKey::SavePrivate(IStream * stream)
-{
-    if (_key == nullptr)
-    {
-        log_error("No key loaded");
-        return false;
-    }
-#if KEY_TYPE == EVP_PKEY_RSA
-    RSA * rsa = EVP_PKEY_get1_RSA(_key);
-    if (rsa == nullptr)
-    {
-        log_error("Failed to get RSA key handle!");
-        return false;
-    }
-    if (!RSA_check_key(rsa))
-    {
-        log_error("Loaded RSA key is invalid");
-        return false;
-    }
-    BIO * bio = BIO_new(BIO_s_mem());
-    if (bio == nullptr)
-    {
-        log_error("Failed to initialise OpenSSL's BIO!");
-        return false;
-    }
-    sint32 result = PEM_write_bio_RSAPrivateKey(bio, rsa, nullptr, nullptr, 0, nullptr, nullptr);
-    if (result != 1)
-    {
-        log_error("failed to write private key!");
-        BIO_free_all(bio);
-        return false;
-    }
-    RSA_free(rsa);
-
-    sint32 keylen = BIO_pending(bio);
-    char * pem_key = new char[keylen];
-    BIO_read(bio, pem_key, keylen);
-    stream->Write(pem_key, keylen);
-    log_verbose("saving key of length %u", keylen);
-    BIO_free_all(bio);
-    delete [] pem_key;
+    EVP_PKEY_CTX_free(pctx);
 #else
-    #error Only RSA is supported!
+    if (EVP_PKEY_id(pkey) == EVP_PKEY_RSA) {
+        RSA *rsa = EVP_PKEY_get1_RSA(pkey);
+        if (!rsa || RSA_check_key(rsa) != 1) {
+            log_error("Invalid private RSA key");
+            EVP_PKEY_free(pkey);
+            return false;
+        }
+    }
 #endif
-
+    if (_key)
+        EVP_PKEY_free(_key);
+    _key = pkey;
     return true;
 }
 
-bool NetworkKey::SavePublic(IStream * stream)
+
+bool NetworkKey::LoadPublic(IStream *stream)
 {
-    if (_key == nullptr)
+    Guard::ArgumentNotNull(stream);
+    long ssize = stream->GetLength();
+    if (ssize < 0)
+    {
+        log_error("unknown size, refusing to load key");
+        return false;
+    }
+    if (ssize > 4 * 1024 * 1024)
+    {
+        log_error("Key file suspiciously large, refusing to load it");
+        return false;
+    }
+    std::vector<unsigned char> buf(static_cast<size_t>(ssize));
+    stream->Read(buf.data(), ssize);
+    BIO *bio = BIO_new_mem_buf(buf.data(), static_cast<int>(ssize));
+    if (!bio)
+    {
+        log_error("Failed to create BIO");
+        return false;
+    }
+    EVP_PKEY *pkey = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr);
+    if (!pkey)
+    {
+        BIO_reset(bio);
+        pkey = d2i_PUBKEY_bio(bio, nullptr);
+    }
+    BIO_free(bio);
+    if (!pkey)
+    {
+        unsigned long err = ERR_get_error();
+        char msg[256];
+        ERR_error_string_n(err, msg, sizeof(msg));
+        log_error("OpenSSL failed to parse public key: %s", msg);
+        return false;
+    }
+    if (_key)
+        EVP_PKEY_free(_key);
+    _key = pkey;
+    return true;
+}
+
+bool NetworkKey::SavePrivate(IStream *stream)
+{
+    if (!_key)
     {
         log_error("No key loaded");
         return false;
     }
-    RSA * rsa = EVP_PKEY_get1_RSA(_key);
-    if (rsa == nullptr)
+    BIO *bio = BIO_new(BIO_s_mem());
+    if (!bio)
     {
-        log_error("Failed to get RSA key handle!");
+        log_error("Failed to create BIO");
         return false;
     }
-    BIO * bio = BIO_new(BIO_s_mem());
-    if (bio == nullptr)
-    {
-        log_error("Failed to initialise OpenSSL's BIO!");
-        return false;
-    }
-    sint32 result = PEM_write_bio_RSAPublicKey(bio, rsa);
-    if (result != 1)
+    if (PEM_write_bio_PrivateKey(bio, _key, nullptr, nullptr, 0, nullptr, nullptr) != 1)
     {
         log_error("failed to write private key!");
         BIO_free_all(bio);
         return false;
     }
-    RSA_free(rsa);
-
-    sint32 keylen = BIO_pending(bio);
-    char * pem_key = new char[keylen];
-    BIO_read(bio, pem_key, keylen);
-    stream->Write(pem_key, keylen);
+    int len = BIO_pending(bio);
+    std::vector<char> data(len);
+    BIO_read(bio, data.data(), len);
     BIO_free_all(bio);
-    delete [] pem_key;
+    stream->Write(data.data(), len);
+    return true;
+}
 
+bool NetworkKey::SavePublic(IStream *stream)
+{
+    if (!_key)
+    {
+        log_error("No key loaded");
+        return false;
+    }
+    BIO *bio = BIO_new(BIO_s_mem());
+    if (!bio)
+    {
+        log_error("Failed to create BIO");
+        return false;
+    }
+    if (PEM_write_bio_PUBKEY(bio, _key) != 1)
+    {
+        log_error("failed to write public key!");
+        BIO_free_all(bio);
+        return false;
+    }
+    int len = BIO_pending(bio);
+    std::vector<char> data(len);
+    BIO_read(bio, data.data(), len);
+    BIO_free_all(bio);
+    stream->Write(data.data(), len);
     return true;
 }
 
 std::string NetworkKey::PublicKeyString()
 {
-    if (_key == nullptr)
+    if (!_key)
     {
         log_error("No key loaded");
-        return nullptr;
+        return {};
     }
-    RSA * rsa = EVP_PKEY_get1_RSA(_key);
-    if (rsa == nullptr)
+    BIO *bio = BIO_new(BIO_s_mem());
+    if (!bio)
     {
-        log_error("Failed to get RSA key handle!");
-        return nullptr;
+        log_error("Failed to create BIO");
+        return {};
     }
-    BIO * bio = BIO_new(BIO_s_mem());
-    if (bio == nullptr)
+    if (PEM_write_bio_PUBKEY(bio, _key) != 1)
     {
-        log_error("Failed to initialise OpenSSL's BIO!");
-        return nullptr;
-    }
-    sint32 result = PEM_write_bio_RSAPublicKey(bio, rsa);
-    if (result != 1)
-    {
-        log_error("failed to write private key!");
+        log_error("failed to write public key!");
         BIO_free_all(bio);
-        return nullptr;
+        return {};
     }
-    RSA_free(rsa);
-
-    sint32 keylen = BIO_pending(bio);
-    char * pem_key = new char[keylen + 1];
-    BIO_read(bio, pem_key, keylen);
+    int len = BIO_pending(bio);
+    std::string s(len, '\0');
+    BIO_read(bio, &s[0], len);
     BIO_free_all(bio);
-    pem_key[keylen] = '\0';
-    std::string pem_key_out(pem_key);
-    delete [] pem_key;
-
-    return pem_key_out;
+    return s;
 }
+
 
 /**
  * @brief NetworkKey::PublicKeyHash

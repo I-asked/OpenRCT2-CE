@@ -18,6 +18,7 @@
 #include <vector>
 #include <openrct2/common.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <openrct2/config/Config.h>
 #include <openrct2/drawing/IDrawingEngine.h>
 #include <openrct2/drawing/X8DrawingEngine.h>
@@ -42,6 +43,7 @@ private:
     SDL_Renderer *      _sdlRenderer                = nullptr;
     SDL_Texture *       _screenTexture              = nullptr;
     SDL_Texture *       _scaledScreenTexture        = nullptr;
+    SDL_Texture *       _cursorTexture              = nullptr;
     SDL_PixelFormat *   _screenTextureFormat        = nullptr;
     uint32              _paletteHWMapped[256]       = { 0 };
 #ifdef __ENABLE_LIGHTFX__
@@ -77,6 +79,10 @@ public:
         {
             SDL_DestroyTexture(_scaledScreenTexture);
         }
+        if (_cursorTexture)
+        {
+            SDL_DestroyTexture(_cursorTexture);
+        }
         SDL_FreeFormat(_screenTextureFormat);
         SDL_DestroyRenderer(_sdlRenderer);
     }
@@ -84,6 +90,11 @@ public:
     void Initialise() override
     {
         _sdlRenderer = SDL_CreateRenderer(_window, -1, SDL_RENDERER_ACCELERATED | (_useVsync ? SDL_RENDERER_PRESENTVSYNC : 0));
+#ifdef __psp2__
+        _cursorTexture = SDL_CreateTextureFromSurface(_sdlRenderer, IMG_Load("app0:cursor.png"));
+#else
+        _cursorTexture = nullptr;
+#endif
     }
 
     void SetVSync(bool vsync) override
@@ -103,7 +114,9 @@ public:
         {
             SDL_DestroyTexture(_screenTexture);
         }
+#ifndef __psp2__
         SDL_FreeFormat(_screenTextureFormat);
+#endif
 
         SDL_RendererInfo rendererInfo = {};
         sint32 result = SDL_GetRendererInfo(_sdlRenderer, &rendererInfo);
@@ -112,10 +125,12 @@ public:
             log_warning("HWDisplayDrawingEngine::Resize error: %s", SDL_GetError());
             return;
         }
+        
         uint32 pixelFormat = SDL_PIXELFORMAT_UNKNOWN;
         for (uint32 i = 0; i < rendererInfo.num_texture_formats; i++)
         {
             uint32 format = rendererInfo.texture_formats[i];
+            // printf("%d\n", format);
             if (!SDL_ISPIXELFORMAT_FOURCC(format) &&
                 !SDL_ISPIXELFORMAT_INDEXED(format) &&
                 (pixelFormat == SDL_PIXELFORMAT_UNKNOWN || SDL_BYTESPERPIXEL(format) < SDL_BYTESPERPIXEL(pixelFormat)))
@@ -144,19 +159,19 @@ public:
 
             char scaleQualityBuffer[4];
             snprintf(scaleQualityBuffer, sizeof(scaleQualityBuffer), "%u", scaleQuality);
-            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
-            _screenTexture = SDL_CreateTexture(_sdlRenderer, pixelFormat, SDL_TEXTUREACCESS_STREAMING, width, height);
-            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scaleQualityBuffer);
+            // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+            _screenTexture = SDL_CreateTexture(_sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+            // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scaleQualityBuffer);
 
             uint32 scale = std::ceil(gConfigGeneral.window_scale);
-            _scaledScreenTexture = SDL_CreateTexture(_sdlRenderer, pixelFormat, SDL_TEXTUREACCESS_TARGET,
+            _scaledScreenTexture = SDL_CreateTexture(_sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET,
                                                      width * scale, height * scale);
         }
         else
         {
-            _screenTexture = SDL_CreateTexture(_sdlRenderer, pixelFormat, SDL_TEXTUREACCESS_STREAMING,width, height);
+            _screenTexture = SDL_CreateTexture(_sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
         }        
-
+        // log_warning("HWDisplayDrawingEngine::Resize error: %s", SDL_GetError());
         uint32 format;
         SDL_QueryTexture(_screenTexture, &format, nullptr, nullptr, nullptr);
         _screenTextureFormat = SDL_AllocFormat(format);
@@ -244,6 +259,14 @@ private:
         {
             SDL_RenderCopy(_sdlRenderer, _screenTexture, nullptr, nullptr);
         }
+        
+        SDL_Rect r;
+        r.x = _uiContext->GetCursorState()->abs_x;
+        r.y = _uiContext->GetCursorState()->abs_y;
+        r.w = 12;
+        r.h = 19;
+        if (_cursorTexture)
+            SDL_RenderCopy(_sdlRenderer, _cursorTexture, nullptr, &r);
 
         if (gShowDirtyVisuals)
         {

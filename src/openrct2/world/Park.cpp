@@ -775,6 +775,7 @@ void park_set_name(const char *name)
 {
     // Required else the pointer arithmetic in the game commands below could cause an access violation
     char* newName = (char *)malloc(USER_STRING_MAX_LENGTH + 5);
+    memset(newName, 0, USER_STRING_MAX_LENGTH + 5);
     strncpy(newName, name, USER_STRING_MAX_LENGTH);
 
     gGameCommandErrorTitle = STR_CANT_RENAME_PARK;

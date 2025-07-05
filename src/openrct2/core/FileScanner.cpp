@@ -26,6 +26,9 @@
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <unistd.h>
+#elif defined(__psp2__)
+    #include <psp2/io/stat.h> 
+    #include <psp2/io/dirent.h> 
 #elif defined(_WIN32)
     // Windows needs this for widechar <-> utf8 conversion utils
     #include "../localisation/Language.h"
@@ -325,7 +328,96 @@ private:
     {
         DirectoryChild result;
         result.Name = std::string(node->d_name);
+#ifndef __psp2__
         if (node->d_type == DT_DIR)
+        {
+            result.Type = DIRECTORY_CHILD_TYPE::DC_DIRECTORY;
+        }
+        else
+        {
+#else   
+        if (node->d_stat.st_attr == SCE_SO_IFDIR)
+        {
+            result.Type = DIRECTORY_CHILD_TYPE::DC_DIRECTORY;
+        }
+        else
+        {
+#endif
+            result.Type = DIRECTORY_CHILD_TYPE::DC_FILE;
+
+            // Get the full path of the file
+            size_t pathSize = String::SizeOf(directory) + 1 + String::SizeOf(node->d_name) + 1;
+            utf8 * path = Memory::Allocate<utf8>(pathSize);
+            String::Set(path, pathSize, directory);
+            Path::Append(path, pathSize, node->d_name);
+#ifndef __psp2__ 
+            struct stat statInfo;
+            sint32 statRes = stat(path, &statInfo);
+            if (statRes != -1)
+            {
+                result.Size = statInfo.st_size;
+                result.LastModified = statInfo.st_mtime;
+
+                if (S_ISDIR(statInfo.st_mode))
+                {
+                    result.Type = DIRECTORY_CHILD_TYPE::DC_DIRECTORY;
+                }
+            }
+#endif
+
+            Memory::Free(path);
+// #ifndef __psp2__
+        }
+// #endif
+        return result;
+    }
+};
+
+#endif // defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+
+#ifdef __psp2__
+class FileScannerPSP2 final : public FileScannerBase
+{
+public:
+    FileScannerPSP2(const std::string &pattern, bool recurse)
+        : FileScannerBase(pattern, recurse)
+    {
+    }
+
+    void GetDirectoryChildren(std::vector<DirectoryChild> &children, const std::string &path) override
+    {
+        // struct dirent * * namelist;
+        
+        SceUID dir = sceIoDopen(path.c_str());
+        if (dir > (SceUID)-1)
+        {
+            SceIoDirent node;
+            while(sceIoDread(dir, &node))
+            {
+                // const struct dirent * node = namelist[i];
+                if (!String::Equals(node.d_name, ".") &&
+                    !String::Equals(node.d_name, ".."))
+                {
+                    DirectoryChild child = CreateChild(path.c_str(), &node);
+                    children.push_back(child);
+                }
+            }
+            sceIoDclose(dir);
+        }
+    }
+
+private:
+    static sint32 FilterFunc(const struct dirent * d)
+    {
+        return 1;
+    }
+
+    static DirectoryChild CreateChild(const utf8 * directory, const SceIoDirent * node)
+    {
+        DirectoryChild result;
+        result.Name = std::string(node->d_name);
+
+        if (node->d_stat.st_attr == SCE_SO_IFDIR)
         {
             result.Type = DIRECTORY_CHILD_TYPE::DC_DIRECTORY;
         }
@@ -339,26 +431,12 @@ private:
             String::Set(path, pathSize, directory);
             Path::Append(path, pathSize, node->d_name);
 
-            struct stat statInfo;
-            sint32 statRes = stat(path, &statInfo);
-            if (statRes != -1)
-            {
-                result.Size = statInfo.st_size;
-                result.LastModified = statInfo.st_mtime;
-
-                if (S_ISDIR(statInfo.st_mode))
-                {
-                    result.Type = DIRECTORY_CHILD_TYPE::DC_DIRECTORY;
-                }
-            }
-
             Memory::Free(path);
         }
         return result;
     }
 };
-
-#endif // defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#endif
 
 IFileScanner * Path::ScanDirectory(const std::string &pattern, bool recurse)
 {
@@ -366,6 +444,8 @@ IFileScanner * Path::ScanDirectory(const std::string &pattern, bool recurse)
     return new FileScannerWindows(pattern, recurse);
 #elif defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
     return new FileScannerUnix(pattern, recurse);
+#elif defined(__psp2__)
+    return new FileScannerPSP2(pattern, recurse);
 #endif
 }
 

@@ -52,7 +52,7 @@ public:
 
     size_t GetNumFiles() const override
     {
-        return zip_get_num_files(_zip);
+        return zip_get_num_entries(_zip, 0);
     }
 
     const utf8 * GetFileName(size_t index) const override
@@ -118,11 +118,11 @@ public:
         sint64 index = zip_name_locate(_zip, path, 0);
         if (index == -1)
         {
-            zip_add(_zip, path, source);
+            zip_file_add(_zip, path, source, 0);
         }
         else
         {
-            zip_replace(_zip, index, source);
+            zip_file_replace(_zip, index, source, 0);
         }
     }
 

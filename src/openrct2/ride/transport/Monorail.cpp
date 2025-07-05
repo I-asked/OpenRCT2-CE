@@ -486,7 +486,7 @@ static void paint_monorail_station(
         imageId = SPR_STATION_BASE_B_NW_SE | session->TrackColours[SCHEME_MISC];
         sub_98197C(session, imageId, 0, 0, 28, 32, 2, height - 2, 2, 0, height);
     }
-
+    direction = direction % 4;
     imageId = monorail_track_pieces_flat[direction] | session->TrackColours[SCHEME_TRACK];
     if (direction == 0 || direction == 2)
     {

@@ -23,6 +23,10 @@
 
 #include "../localisation/Language.h"
 
+#ifdef __psp2__
+#include <psp2/io/fcntl.h>
+#endif
+
 enum
 {
     FILE_MODE_OPEN,
@@ -36,19 +40,61 @@ enum
 class FileStream final : public IStream
 {
 private:
+#ifdef __psp2__
+    SceUID      _file           = 0;
+#else
     FILE *      _file           = nullptr;
+#endif
     bool        _ownsFilePtr    = false;
     bool        _canRead        = false;
     bool        _canWrite       = false;
     bool        _disposed       = false;
     uint64      _fileSize       = 0;
+    uint64      _pos            = 0;
 
 public:
     FileStream(const std::string &path, sint32 fileMode) :
         FileStream(path.c_str(), fileMode)
     {
     }
+#ifdef __psp2__
+    FileStream(const utf8 * path, sint32 fileMode)
+    {
+        SceMode mode;
+        switch (fileMode) {
+        case FILE_MODE_OPEN:
+            mode = SCE_O_RDONLY;
+            _canRead = true;
+            _canWrite = false;
+            break;
+        case FILE_MODE_WRITE:
+            mode = SCE_O_RDWR | SCE_O_CREAT;
+            _canRead = true;
+            _canWrite = true;
+            break;
+        case FILE_MODE_APPEND:
+            mode = SCE_O_APPEND | SCE_O_CREAT;
+            _canRead = false;
+            _canWrite = true;
+            break;
+        default:
+            throw;
+        }
 
+
+        _file = sceIoOpen(path, mode, 0777);
+        if (_file == 0)
+        {
+            throw IOException(String::StdFormat("Unable to open '%s'", path));
+        }
+
+        Seek(0, STREAM_SEEK_END);
+        _fileSize = GetPosition();
+        Seek(0, STREAM_SEEK_BEGIN);
+
+        _ownsFilePtr = true;
+    }
+#else
     FileStream(const utf8 * path, sint32 fileMode)
     {
         const char * mode;
@@ -79,6 +125,7 @@ public:
         free(pathW);
         free(modeW);
 #else
+
         _file = fopen(path, mode);
 #endif
         if (_file == nullptr)
@@ -89,10 +136,24 @@ public:
         Seek(0, STREAM_SEEK_END);
         _fileSize = GetPosition();
         Seek(0, STREAM_SEEK_BEGIN);
+        
 
         _ownsFilePtr = true;
     }
-
+#endif
+#ifdef __psp2__
+    ~FileStream() override
+    {
+        if (!_disposed)
+        {
+            _disposed = true;
+            if (_ownsFilePtr)
+            {
+                sceIoClose(_file);
+            }
+        }
+    }
+#else
     ~FileStream() override
     {
         if (!_disposed)
@@ -104,7 +165,7 @@ public:
             }
         }
     }
-
+#endif
     bool CanRead()  const override { return _canRead;  }
     bool CanWrite() const override { return _canWrite; }
 
@@ -115,6 +176,8 @@ public:
         return _ftelli64(_file);
 #elif (defined(__APPLE__) && defined(__MACH__)) || defined(__ANDROID__) || defined(__OpenBSD__) || defined(__FreeBSD__)
         return ftello(_file);
+#elif  defined(__psp2__)
+        return _pos;
 #else
         return ftello64(_file);
 #endif
@@ -151,6 +214,20 @@ public:
             fseeko(_file, offset, SEEK_END);
             break;
         }
+#elif  defined(__psp2__)
+        switch (origin) {
+        case STREAM_SEEK_BEGIN:
+            // fseeko(_file, offset, SEEK_SET);
+            _pos = sceIoLseek(_file, offset, SCE_SEEK_SET);
+            break;
+        case STREAM_SEEK_CURRENT:
+            // fseeko(_file, offset, SEEK_CUR);
+            _pos = sceIoLseek(_file, offset, SCE_SEEK_CUR);
+            break;
+        case STREAM_SEEK_END:
+            _pos = sceIoLseek(_file, offset, SCE_SEEK_END);
+            break;
+        }
 #else
         switch (origin) {
         case STREAM_SEEK_BEGIN:
@@ -165,7 +242,34 @@ public:
     }
 #endif
     }
+#ifdef __psp2__
+    void Read(void * buffer, uint64 length) override
+    {
+        uint64 remainingBytes = GetLength() - GetPosition();
+        if (length <= remainingBytes)
+        {
+            _pos += sceIoRead(_file, buffer, length);
+            return;
+        }
+        throw IOException("Attempted to read past end of file.");
+    }
 
+    void Write(const void * buffer, uint64 length) override
+    {
+        _pos += sceIoWrite(_file, buffer, length);
+
+
+        // uint64 position = GetPosition();
+        _fileSize = Math::Max(_fileSize, _pos);
+    }
+
+    uint64 TryRead(void * buffer, uint64 length) override
+    {
+        size_t readBytes = sceIoRead(_file, buffer, length);
+        _pos += readBytes;
+        return readBytes;
+    }
+#else
     void Read(void * buffer, uint64 length) override
     {
         uint64 remainingBytes = GetLength() - GetPosition();
@@ -195,4 +299,5 @@ public:
         size_t readBytes = fread(buffer, 1, (size_t)length, _file);
         return readBytes;
     }
+#endif
 };

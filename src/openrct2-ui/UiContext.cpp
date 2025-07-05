@@ -39,7 +39,8 @@
 #include "TextComposition.h"
 #include "UiContext.h"
 #include "WindowManager.h"
-
+#include <openrct2/platform/platform.h>
+#include <openrct2/interface/Chat.h>
 #include <openrct2/Input.h>
 #include <openrct2/interface/Console.h>
 #include <openrct2-ui/interface/Window.h>
@@ -59,7 +60,7 @@ using namespace OpenRCT2::Ui;
 class UiContext final : public IUiContext
 {
 private:
-    constexpr static uint32 TOUCH_DOUBLE_TIMEOUT = 300;
+    // constexpr static uint32 TOUCH_DOUBLE_TIMEOUT = 300;
 
     IPlatformUiContext * const      _platformUiContext;
     IWindowManager * const          _windowManager;
@@ -85,20 +86,42 @@ private:
     uint8               _keysPressed[256]       = { 0 };
     uint32              _lastGestureTimestamp   = 0;
     float               _gestureRadius          = 0;
-
+    sint32              joy_x                   = 0;
+    sint32              joy_y                   = 0;
+    sint32              _scrollX                = 0;
+    sint32              _scrollY                = 0;
+    uint32              _lastTick               = 0;
+    uint32              currentTick             = 0;
+    uint32              elapsed                 = 0;
+    uint8               _cursorPrecision        = 3;
+    const uint8         _cursorPrecisionHigh    = 1;
+    const uint8         _cursorPrecisionLow     = 3;
 public:
     explicit UiContext(IPlatformEnvironment * env)
         : _platformUiContext(CreatePlatformUiContext()),
           _windowManager(CreateWindowManager()),
           _keyboardShortcuts(env)
     {
-        if (SDL_Init(SDL_INIT_VIDEO) < 0)
+        SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS,"1");
+        SDL_setenv("VITA_DISABLE_TOUCH_BACK", "1", 1);
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0)
         {
             SDLException::Throw("SDL_Init(SDL_INIT_VIDEO)");
         }
         _cursorRepository.LoadCursors();
         _keyboardShortcuts.Reset();
         _keyboardShortcuts.Load();
+        if(SDL_NumJoysticks() > 0) {
+            SDL_JoystickOpen(0);
+            SDL_JoystickEventState(SDL_ENABLE);
+            SDL_GameControllerOpen(0);
+            // SetCursor((CURSOR_ID)19);
+            // SetCursorVisible(false);
+            _cursorState.x = 0;
+            _cursorState.y = 0;
+            _cursorState.abs_x = 2;
+            _cursorState.abs_y = 2;
+        }
     }
 
     ~UiContext() override
@@ -106,6 +129,8 @@ public:
         CloseWindow();
         delete _windowManager;
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+        SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
         delete _platformUiContext;
     }
 
@@ -246,6 +271,9 @@ public:
     // Drawing
     IDrawingEngine * CreateDrawingEngine(DRAWING_ENGINE_TYPE type) override
     {
+#ifdef __psp2__
+        return CreateHardwareDisplayDrawingEngine(this);
+#else
         switch ((sint32)type) {
         case DRAWING_ENGINE_SOFTWARE:
             return CreateSoftwareDrawingEngine(this);
@@ -258,6 +286,7 @@ public:
         default:
             return nullptr;
         }
+#endif
     }
 
     // Text input
@@ -284,6 +313,31 @@ public:
         _cursorState.right &= ~CURSOR_CHANGED;
         _cursorState.old = 0;
         _cursorState.touch = false;
+
+
+        currentTick = platform_get_ticks();
+
+        if (_lastTick == 0)
+        {
+            _lastTick = currentTick;
+        }
+
+        elapsed = currentTick - _lastTick;
+        _lastTick = currentTick;
+        _cursorState.abs_x += joy_x * (elapsed / _cursorPrecision);
+        _cursorState.abs_y += joy_y * (elapsed / _cursorPrecision);
+
+        if(_cursorState.abs_x < 0) 
+           _cursorState.abs_x = 0;
+        if(_cursorState.abs_y < 0)
+            _cursorState.abs_y = 0;
+        if(_cursorState.abs_x > 960) 
+           _cursorState.abs_x = 960;
+        if(_cursorState.abs_y > 544)
+            _cursorState.abs_y = 544;
+
+        _cursorState.x = _cursorState.abs_x / gConfigGeneral.window_scale;
+        _cursorState.y = _cursorState.abs_y / gConfigGeneral.window_scale;
 
         SDL_Event e;
         while (SDL_PollEvent(&e))
@@ -344,9 +398,17 @@ public:
                     }
                 }
                 break;
+            case SDL_CONTROLLERAXISMOTION:
+                if (e.caxis.axis == 0) {
+                    joy_x = (sint32)(e.caxis.value / 20000);
+                }
+                if (e.caxis.axis == 1) {
+                    joy_y = (sint32)(e.caxis.value / 20000 );
+                }
+                break;
             case SDL_MOUSEMOTION:
-                _cursorState.x = (sint32)(e.motion.x / gConfigGeneral.window_scale);
-                _cursorState.y = (sint32)(e.motion.y / gConfigGeneral.window_scale);
+                _cursorState.abs_x = (sint32)(e.motion.x / gConfigGeneral.window_scale);
+                _cursorState.abs_y = (sint32)(e.motion.y / gConfigGeneral.window_scale);
                 break;
             case SDL_MOUSEWHEEL:
                 if (gConsoleOpen)
@@ -356,6 +418,86 @@ public:
                 }
                 _cursorState.wheel -= e.wheel.y;
                 break;
+            case SDL_JOYBUTTONDOWN:
+                if(e.jbutton.button == 2)//cross on psp2
+                {
+                    store_mouse_input(MOUSE_STATE_LEFT_PRESS, _cursorState.x, _cursorState.y);
+                    _cursorState.left = CURSOR_PRESSED;
+                    _cursorState.old = 1;
+                }
+                if(e.jbutton.button == 3) // square on psp2
+                {
+                    store_mouse_input(MOUSE_STATE_RIGHT_PRESS, _cursorState.x, _cursorState.y);
+                    _cursorState.right = CURSOR_PRESSED;
+                    _cursorState.old = 2;
+                }
+                if(e.jbutton.button == 1) //circle on psp2
+                {
+                    _cursorPrecision = _cursorPrecisionHigh;
+                }
+                break;
+            case SDL_CONTROLLERBUTTONDOWN:
+
+                if(e.cbutton.button == 11) //dpad up on psp2
+                {
+                    _scrollY = -4;
+                }
+                if(e.cbutton.button == 12) 
+                {
+                    _scrollY = 4;
+                }
+                if(e.cbutton.button == 13) 
+                {
+                    _scrollX = -4;
+                }
+                if(e.cbutton.button == 14) 
+                {
+                    _scrollX = 4;
+                }
+                input_scroll_viewport(_scrollX, _scrollY);
+                
+                if(e.cbutton.button == SDL_CONTROLLER_BUTTON_START)
+                {
+                    chat_toggle();
+                }
+                break;
+            case SDL_CONTROLLERBUTTONUP:
+                _scrollX = 0;
+                _scrollY = 0;
+                break;
+                
+            case SDL_JOYBUTTONUP:
+                if(e.jbutton.button == 2)
+                {
+                    store_mouse_input(MOUSE_STATE_LEFT_RELEASE, _cursorState.x, _cursorState.y);
+                    _cursorState.left = CURSOR_RELEASED;
+                    _cursorState.old = 3;
+                }
+                if(e.jbutton.button == 3)
+                {
+                    store_mouse_input(MOUSE_STATE_RIGHT_RELEASE, _cursorState.x, _cursorState.y);
+                    _cursorState.right = CURSOR_RELEASED;
+                    _cursorState.old = 4;
+                }
+                if(e.jbutton.button == SDL_CONTROLLER_BUTTON_A) //triangle on psp2
+                {
+                    keyboard_shortcut_handle_command(SHORTCUT_CLOSE_ALL_FLOATING_WINDOWS);
+                }
+                if(e.jbutton.button == 4) //l trigger on psp2
+                {
+                    keyboard_shortcut_handle_command(SHORTCUT_ROTATE_VIEW_CLOCKWISE);
+                }
+                if(e.jbutton.button == 5) //r trigger on psp2
+                {
+                    keyboard_shortcut_handle_command(SHORTCUT_ROTATE_VIEW_ANTICLOCKWISE);
+                }
+
+                if(e.jbutton.button == 1) //circle on psp2
+                {
+                    _cursorPrecision = _cursorPrecisionLow;
+                }
+                break;
+                
             case SDL_MOUSEBUTTONDOWN:
             {
                 sint32 x = (sint32)(e.button.x / gConfigGeneral.window_scale);
@@ -648,11 +790,12 @@ private:
 
         // Create window in window first rather than fullscreen so we have the display the window is on first
         uint32 flags = SDL_WINDOW_RESIZABLE;
+#ifndef __psp2__
         if (gConfigGeneral.drawing_engine == DRAWING_ENGINE_OPENGL)
         {
             flags |= SDL_WINDOW_OPENGL;
         }
-
+#endif
         _window = SDL_CreateWindow(OPENRCT2_NAME, x, y, width, height, flags);
         if (_window == nullptr)
         {
@@ -735,7 +878,7 @@ private:
                 }
             }
         }
-
+        resolutions.push_back({ 960, 544 });
         // Sort by area
         std::sort(resolutions.begin(), resolutions.end(),
             [](const Resolution &a, const Resolution &b) -> bool

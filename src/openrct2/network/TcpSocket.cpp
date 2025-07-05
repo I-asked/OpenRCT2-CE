@@ -69,6 +69,165 @@ constexpr auto CONNECT_TIMEOUT = std::chrono::milliseconds(3000);
     static bool _wsaInitialised = false;
 #endif
 
+#if 0
+
+extern "C" {
+int getnameinfo(const struct sockaddr *restrict sa, socklen_t sl,
+	char *restrict node, socklen_t nodelen,
+	char *restrict serv, socklen_t servlen,
+	int flags);
+int getnameinfo(const struct sockaddr *restrict sa, socklen_t sl,
+	char *restrict node, socklen_t nodelen,
+	char *restrict serv, socklen_t servlen,
+	int flags)
+{
+	char ptr[PTR_MAX];
+	char buf[256], num[3*sizeof(int)+1];
+	int af = sa->sa_family;
+	unsigned char *a;
+	unsigned scopeid;
+
+	switch (af) {
+	case AF_INET:
+		a = (void *)&((struct sockaddr_in *)sa)->sin_addr;
+		if (sl < sizeof(struct sockaddr_in)) return EAI_FAMILY;
+		mkptr4(ptr, a);
+		scopeid = 0;
+		break;
+	case AF_INET6:
+		a = (void *)&((struct sockaddr_in6 *)sa)->sin6_addr;
+		if (sl < sizeof(struct sockaddr_in6)) return EAI_FAMILY;
+		if (memcmp(a, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12))
+			mkptr6(ptr, a);
+		else
+			mkptr4(ptr, a+12);
+		scopeid = ((struct sockaddr_in6 *)sa)->sin6_scope_id;
+		break;
+	default:
+		return EAI_FAMILY;
+	}
+
+	if (node && nodelen) {
+		buf[0] = 0;
+		if (!(flags & NI_NUMERICHOST)) {
+			reverse_hosts(buf, a, scopeid, af);
+		}
+		if (!*buf && !(flags & NI_NUMERICHOST)) {
+			unsigned char query[18+PTR_MAX], reply[512];
+			int qlen = __res_mkquery(0, ptr, 1, RR_PTR,
+				0, 0, 0, query, sizeof query);
+			query[3] = 0; /* don't need AD flag */
+			int rlen = __res_send(query, qlen, reply, sizeof reply);
+			buf[0] = 0;
+			if (rlen > 0) {
+				if (rlen > sizeof reply) rlen = sizeof reply;
+				__dns_parse(reply, rlen, dns_parse_callback, buf);
+			}
+		}
+		if (!*buf) {
+			if (flags & NI_NAMEREQD) return EAI_NONAME;
+			inet_ntop(af, a, buf, sizeof buf);
+			if (scopeid) {
+				char *p = 0, tmp[IF_NAMESIZE+1];
+				if (!(flags & NI_NUMERICSCOPE) &&
+				    (IN6_IS_ADDR_LINKLOCAL(a) ||
+				     IN6_IS_ADDR_MC_LINKLOCAL(a)))
+					p = if_indextoname(scopeid, tmp+1);
+				if (!p)
+					p = itoa(num, scopeid);
+				*--p = '%';
+				strcat(buf, p);
+			}
+		}
+		if (strlen(buf) >= nodelen) return EAI_OVERFLOW;
+		strcpy(node, buf);
+	}
+
+	if (serv && servlen) {
+		char *p = buf;
+		int port = ntohs(((struct sockaddr_in *)sa)->sin_port);
+		buf[0] = 0;
+		if (!(flags & NI_NUMERICSERV))
+			reverse_services(buf, port, flags & NI_DGRAM);
+		if (!*p)
+			p = itoa(num, port);
+		if (strlen(p) >= servlen)
+			return EAI_OVERFLOW;
+		strcpy(serv, p);
+	}
+
+	return 0;
+}
+}
+#endif
+extern "C" {
+    int custom_getnameinfo(const struct sockaddr *sa, socklen_t salen,
+                       char *host, size_t hostlen,
+                       char *serv, size_t servlen, int flags);
+int custom_getnameinfo(const struct sockaddr *sa, socklen_t salen,
+                       char *host, size_t hostlen,
+                       char *serv, size_t servlen, int flags) {
+    if (sa == NULL) {
+        return EAI_FAIL;
+    }
+
+    if (host != NULL) {
+        memset(host, 0, hostlen);
+    }
+
+    if (serv != NULL) {
+        memset(serv, 0, servlen);
+    }
+
+    if (sa->sa_family == AF_INET) {
+        const struct sockaddr_in *sa_in = (const struct sockaddr_in *)sa;
+        if (host != NULL) {
+            if (inet_ntop(AF_INET, &sa_in->sin_addr, host, hostlen) == NULL) {
+                return EAI_SYSTEM;
+            }
+            if (!(flags & NI_NUMERICHOST)) {
+                struct hostent *he = gethostbyaddr((const void *)&sa_in->sin_addr, sizeof(sa_in->sin_addr), AF_INET);
+                if (he != NULL) {
+                    strncpy(host, he->h_name, hostlen - 1);
+                }
+            }
+        }
+
+        if (serv != NULL) {
+            if (!(flags & NI_NUMERICSERV)) {
+                printf("not supported\n");
+            } else {
+                snprintf(serv, servlen, "%d", ntohs(sa_in->sin_port));
+            }
+        }
+    } else if (sa->sa_family == AF_INET6) {
+        const struct sockaddr_in6 *sa_in6 = (const struct sockaddr_in6 *)sa;
+        if (host != NULL) {
+            if (inet_ntop(AF_INET6, &sa_in6->sin6_addr, host, hostlen) == NULL) {
+                return EAI_SYSTEM;
+            }
+            if (!(flags & NI_NUMERICHOST)) {
+                struct hostent *he = gethostbyaddr((const void *)&sa_in6->sin6_addr, sizeof(sa_in6->sin6_addr), AF_INET6);
+                if (he != NULL) {
+                    strncpy(host, he->h_name, hostlen - 1);
+                }
+            }
+        }
+
+        if (serv != NULL) {
+            if (!(flags & NI_NUMERICSERV)) {
+                printf("not supported\n");
+            } else {
+                snprintf(serv, servlen, "%d", ntohs(sa_in6->sin6_port));
+            }
+        }
+    } else {
+        return EAI_FAMILY;
+    }
+
+    return 0; // Success
+}
+}
 class TcpSocket;
 
 class SocketException : public std::runtime_error
@@ -140,11 +299,14 @@ public:
 
         // Turn off IPV6_V6ONLY so we can accept both v4 and v6 connections
         sint32 value = 0;
+#ifndef __psp2__
         if (setsockopt(_socket, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&value, sizeof(value)) != 0)
         {
             log_error("IPV6_V6ONLY failed. %d", LAST_SOCKET_ERROR());
         }
-
+#else
+#define SOMAXCONN 128
+#endif
         value = 1;
         if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&value, sizeof(value)) != 0)
         {
@@ -206,7 +368,7 @@ public:
             else
             {
                 char hostName[NI_MAXHOST];
-                sint32 rc = getnameinfo(
+                sint32 rc = custom_getnameinfo(
                     (struct sockaddr *)&client_addr,
                     client_len,
                     hostName,
@@ -238,7 +400,7 @@ public:
             _status = SOCKET_STATUS_RESOLVING;
 
             sockaddr_storage ss;
-            sint32 ss_len;
+            sint32 ss_len = 0;
             if (!ResolveAddress(address, port, &ss, &ss_len))
             {
                 throw SocketException("Unable to resolve address.");
@@ -452,7 +614,9 @@ private:
         if (errorcode != 0)
         {
             log_error("Resolving address failed: Code %d.", errorcode);
+#ifndef __psp2__
             log_error("Resolution error message: %s.", gai_strerror(errorcode));
+#endif
             return false;
         }
         if (result == nullptr)

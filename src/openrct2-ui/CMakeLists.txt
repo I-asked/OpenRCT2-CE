@@ -14,7 +14,7 @@ if (NOT DISABLE_OPENGL)
     # GL doesn't work nicely with macOS, while find_package doesn't work with multiarch on Ubuntu.
     if (APPLE)
         find_package(OpenGL REQUIRED)
-    elseif (NOT WIN32)
+    elseif (NOT WIN32 AND NOT VITA)
         PKG_CHECK_MODULES(GL REQUIRED gl)
     endif ()
 endif ()
@@ -48,6 +48,8 @@ if (NOT DISABLE_OPENGL)
         target_link_libraries(${PROJECT} opengl32)
     elseif (APPLE)
         target_link_libraries(${PROJECT} ${OPENGL_LIBRARY})
+    elseif (VITA)
+        target_link_libraries(${PROJECT} libGLESv2_stub libIMGEGL_stub libgpu_es4_ext_stub)
     else ()
         target_link_libraries(${PROJECT} ${GL_LIBRARIES})
     endif ()
@@ -72,3 +74,15 @@ else ()
     # Makes OpenGL function get queried in run-time rather than linked-in
     add_definitions(-DOPENGL_NO_LINK)
 endif ()
+if(VITA)
+target_link_libraries(${PROJECT} SDL2_image jpeg webp)
+set(VITA_APP_NAME "OpenRCT2")
+set(VITA_TITLEID  "OPRCT0002")
+set(VITA_VERSION  "01.00")
+vita_create_self(eboot.bin ${PROJECT_NAME} UNSAFE)
+vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} eboot.bin
+  VERSION ${VITA_VERSION}
+  NAME ${VITA_APP_NAME}
+  FILE cursor.png cursor.png
+)
+endif()

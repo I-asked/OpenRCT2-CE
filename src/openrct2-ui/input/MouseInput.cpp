@@ -323,6 +323,7 @@ static void game_handle_input_mouse(sint32 x, sint32 y, sint32 state)
                 case WWT_VIEWPORT:
                     if (!(gScreenFlags & (SCREEN_FLAGS_TRACK_MANAGER | SCREEN_FLAGS_TITLE_DEMO)))
                     {
+                        //get vita joy
                         input_viewport_drag_begin(w, x, y);
                     }
                     break;

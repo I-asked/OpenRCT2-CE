@@ -675,7 +675,7 @@ static sint32 cc_staff(const utf8 **argv, sint32 argc)
                 int_val[0] = console_parse_int(argv[2], &int_valid[0]);
                 int_val[1] = console_parse_int(argv[3], &int_valid[1]);
 
-                if (int_valid[0] && int_valid[1] && ((GET_PEEP(int_val[0])) != nullptr)) {
+                if (int_valid[0] && int_valid[1]) {
                     rct_peep *peep = GET_PEEP(int_val[0]);
 
                     peep->energy = int_val[1];

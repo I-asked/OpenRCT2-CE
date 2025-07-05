@@ -24,6 +24,7 @@
 #include "File.h"
 #include "FileScanner.h"
 #include "FileStream.hpp"
+#include "MemoryStream.h"
 #include "Path.hpp"
 
 template<typename TItem>
@@ -151,7 +152,7 @@ private:
     {
         DirectoryStats stats {};
         std::vector<std::string> files;
-        for (const auto directory : SearchPaths)
+        for (const auto& directory : SearchPaths)
         {
             log_verbose("FileIndex:Scanning for %s in '%s'", _pattern.c_str(), directory.c_str());
 
@@ -215,23 +216,29 @@ private:
             {
                 log_verbose("FileIndex:Loading index: '%s'", _indexPath.c_str());
                 auto fs = FileStream(_indexPath, FILE_MODE_OPEN);
+                uint64 size = fs.GetLength();
+                void* buffer = malloc(size);
+                fs.Read(buffer, size);
+                auto ms = MemoryStream(buffer, size, MEMORY_ACCESS::OWNER);
 
                 // Read header, check if we need to re-scan
-                auto header = fs.ReadValue<FileIndexHeader>();
+                auto header = ms.ReadValue<FileIndexHeader>();
                 if (header.HeaderSize == sizeof(FileIndexHeader) &&
                     header.MagicNumber == _magicNumber &&
                     header.VersionA == FILE_INDEX_VERSION &&
                     header.VersionB == _version &&
                     header.LanguageId == gCurrentLanguage &&
                     header.Stats.TotalFiles == stats.TotalFiles &&
+#ifndef __psp2__ //slows down too much, see FileScanner.cpp
                     header.Stats.TotalFileSize == stats.TotalFileSize &&
                     header.Stats.FileDateModifiedChecksum == stats.FileDateModifiedChecksum &&
+#endif
                     header.Stats.PathChecksum == stats.PathChecksum)
                 {
                     // Directory is the same, just read the saved items
                     for (uint32 i = 0; i < header.NumItems; i++)
                     {
-                        auto item = Deserialise(&fs);
+                        auto item = Deserialise(&ms);
                         items.push_back(item);
                     }
                     loadedItems = true;
@@ -240,6 +247,7 @@ private:
                 {
                     Console::WriteLine("%s out of date", _name.c_str());
                 }
+                
             }
             catch (const std::exception &e)
             {
@@ -269,7 +277,7 @@ private:
             fs.WriteValue(header);
     
             // Write items
-            for (const auto item : items)
+            for (const auto& item : items)
             {
                 Serialise(&fs, item);
             }

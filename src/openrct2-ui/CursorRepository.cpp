@@ -45,6 +45,10 @@ CURSOR_ID CursorRepository::GetCurrentCursor()
 
 void CursorRepository::SetCurrentCursor(CURSOR_ID cursorId)
 {
+#ifdef __psp2__
+    if(cursorId == 0)
+        cursorId = CURSOR_UP_ARROW;
+#endif
     if (_currentCursor != cursorId)
     {
         SDL_Cursor * cursor = _scaledCursors.at(_currentCursorScale).getScaledCursor(cursorId);

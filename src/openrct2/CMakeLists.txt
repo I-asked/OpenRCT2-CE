@@ -8,7 +8,15 @@ endif ()
 if (APPLE)
     set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/usr/local/opt/openssl/lib/pkgconfig")
 endif ()
-
+if(VITA)
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  if(DEFINED ENV{VITASDK})
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE PATH "toolchain file")
+  else()
+    message(FATAL_ERROR "Please define VITASDK to point to your SDK path!")
+  endif()
+endif()
+endif()
 # Third party libraries
 PKG_CHECK_MODULES(JANSSON REQUIRED jansson>=2.5)
 PKG_CHECK_MODULES(LIBZIP REQUIRED libzip>=1.0)
@@ -52,6 +60,10 @@ endif ()
 # Outputs
 set(PROJECT libopenrct2)
 project(${PROJECT} CXX)
+if(VITA)
+include("${VITASDK}/share/vita.cmake" REQUIRED)
+add_definitions(-D__psp2__)
+endif()
 add_library(${PROJECT} ${OPENRCT2_CORE_SOURCES} ${OPENRCT2_CORE_MM_SOURCES} ${RCT2_SECTIONS})
 set_target_properties(${PROJECT} PROPERTIES PREFIX "")
 
@@ -92,7 +104,7 @@ if (NOT DISABLE_NETWORK)
     endif ()
 endif ()
 
-if (NOT APPLE AND NOT MINGW)
+if (NOT APPLE AND NOT MINGW AND NOT VITA)
     # This is ugly hack to work around https://bugs.launchpad.net/ubuntu/+source/gcc-5/+bug/1568899.
     # Once C++17 is enabled (and thus old compilers are no longer supported, this needs to be gone.
     # We cannot simply detect the _compiler_ version, as the bug exists with the C++ _library_
@@ -139,7 +151,10 @@ if (NOT DISABLE_TTF)
         target_include_directories(${PROJECT} PRIVATE ${FONTCONFIG_INCLUDE_DIRS})
     endif ()
 endif ()
-
+if(VITA)
+target_include_directories(${PROJECT} PRIVATE ${FONTCONFIG_INCLUDE_DIRS})
+target_link_libraries(${PROJECT} -Wl,--whole-archive -lpthread -Wl,--no-whole-archive)
+endif()
 # To avoid unnecessary rebuilds set the current branch and
 # short sha1 only for the two files that use these
 # definitions: Version.cpp and Crash/Platform.cpp

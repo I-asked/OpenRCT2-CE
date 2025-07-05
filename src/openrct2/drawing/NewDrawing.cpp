@@ -33,16 +33,20 @@ using namespace OpenRCT2::Drawing;
 using namespace OpenRCT2::Paint;
 using namespace OpenRCT2::Ui;
 
-static sint32                   _drawingEngineType  = DRAWING_ENGINE_SOFTWARE;
+static sint32                   _drawingEngineType  = DRAWING_ENGINE_SOFTWARE_WITH_HARDWARE_DISPLAY;
 static IDrawingEngine *         _drawingEngine      = nullptr;
 // TODO move this to Context
 static Painter *                _painter            = nullptr;
 
 rct_string_id DrawingEngineStringIds[] =
 {
+#ifndef __psp2__
     STR_DRAWING_ENGINE_SOFTWARE,
+#endif
     STR_DRAWING_ENGINE_SOFTWARE_WITH_HARDWARE_DISPLAY,
+#ifndef __psp2__
     STR_DRAWING_ENGINE_OPENGL,
+#endif
 };
 
 sint32 drawing_engine_get_type()
@@ -77,6 +81,10 @@ void drawing_engine_init()
 
     if (drawingEngine == nullptr)
     {
+#ifdef __psp2__
+        log_fatal("Unable to create a drawing engine.");
+        exit(-1);
+#else
         if (_drawingEngineType == DRAWING_ENGINE_SOFTWARE)
         {
             _drawingEngineType = DRAWING_ENGINE_NONE;
@@ -92,6 +100,7 @@ void drawing_engine_init()
             config_save_default();
             drawing_engine_init();
         }
+#endif
     }
     else
     {
@@ -108,6 +117,11 @@ void drawing_engine_init()
             _painter = nullptr;
             delete drawingEngine;
             drawingEngine = nullptr;
+#ifdef __psp2__
+            log_error(ex.what());
+            log_fatal("Unable to initialise a drawing engine.");
+            exit(-1);
+#else
             if (_drawingEngineType == DRAWING_ENGINE_SOFTWARE)
             {
                 _drawingEngineType = DRAWING_ENGINE_NONE;
@@ -125,6 +139,7 @@ void drawing_engine_init()
                 config_save_default();
                 drawing_engine_init();
             }
+#endif
         }
     }
 }

@@ -14,7 +14,7 @@
  *****************************************************************************/
 #pragma endregion
 
-#include <algorithm>
+// #include <algorithm>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -81,6 +81,7 @@ private:
     static constexpr uint32 MAGIC_NUMBER = 0x5844494F; // OIDX
     static constexpr uint16 VERSION = 17;
     static constexpr auto PATTERN = "*.dat;*.pob";
+    IZipArchive * zip;
 
 public:
     explicit ObjectFileIndex(IPlatformEnvironment * env) :
@@ -93,12 +94,14 @@ public:
                 env->GetDirectoryPath(DIRBASE::RCT2, DIRID::OBJECT),
                 env->GetDirectoryPath(DIRBASE::USER, DIRID::OBJECT) }))
     {
+       zip = env->GetZip();
     }
-
+    
 public:
+    
     std::tuple<bool, ObjectRepositoryItem> Create(const std::string &path) const override
     {
-        auto object = ObjectFactory::CreateObjectFromLegacyFile(path.c_str());
+        auto object = ObjectFactory::CreateObjectFromLegacyFile(path.c_str(), zip);
         if (object != nullptr)
         {
             ObjectRepositoryItem item = { 0 };
@@ -114,6 +117,7 @@ public:
             return std::make_tuple(false, ObjectRepositoryItem());
         }
     }
+
 
 protected:
     void Serialise(IStream * stream, const ObjectRepositoryItem &item) const override
@@ -199,6 +203,7 @@ public:
         : _env(env),
           _fileIndex(env)
     {
+        zip = _env->GetZip();
     }
 
     ~ObjectRepository() final
@@ -260,7 +265,7 @@ public:
     {
         Guard::ArgumentNotNull(ori, GUARD_LINE);
 
-        Object * object = ObjectFactory::CreateObjectFromLegacyFile(ori->Path);
+        Object * object = ObjectFactory::CreateObjectFromLegacyFile(ori->Path, zip);
         return object;
     }
 
@@ -348,6 +353,7 @@ public:
     }
 
 private:
+    IZipArchive * zip;
     void ClearItems()
     {
         for (auto &item : _items)

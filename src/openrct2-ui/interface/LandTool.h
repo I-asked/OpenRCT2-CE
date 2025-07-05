@@ -21,7 +21,11 @@
 #include <openrct2-ui/interface/Window.h>
 
 #define MINIMUM_TOOL_SIZE         1
+#ifdef __psp2__
+#define MAXIMUM_TOOL_SIZE         8
+#else
 #define MAXIMUM_TOOL_SIZE         64
+#endif
 // The highest tool size to have a sprite. Bigger tool sizes simply display a number.
 #define MAX_TOOL_SIZE_WITH_SPRITE 7
 

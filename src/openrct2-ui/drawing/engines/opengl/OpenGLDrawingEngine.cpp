@@ -16,6 +16,7 @@
 
 #ifndef DISABLE_OPENGL
 
+#include <stdexcept>
 #include <algorithm>
 #include <cmath>
 #include <unordered_map>

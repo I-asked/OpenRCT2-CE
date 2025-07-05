@@ -23,10 +23,13 @@
 #endif
 
 static bool _log_location_enabled = true;
-bool _log_levels[DIAGNOSTIC_LEVEL_COUNT] = { true, true, true, false, true };
+bool _log_levels[DIAGNOSTIC_LEVEL_COUNT] = { true, true, true, true, true };
 
 static FILE * diagnostic_get_stream(DIAGNOSTIC_LEVEL level)
 {
+#ifdef __psp2__
+    return stderr;
+#endif
     switch (level) {
     case DIAGNOSTIC_LEVEL_VERBOSE:
     case DIAGNOSTIC_LEVEL_INFORMATION:

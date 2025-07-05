@@ -305,6 +305,8 @@ bool gfx_load_g2()
 
     platform_get_openrct_data_path(path, sizeof(path));
     safe_strcat_path(path, "g2.dat", MAX_PATH);
+    printf("g2.dat is loaded from\n");
+    printf("%s\n", path);
     try
     {
         auto fs = FileStream(path, FILE_MODE_OPEN);
@@ -329,7 +331,7 @@ bool gfx_load_g2()
         _g2.elements.clear();
         _g2.elements.shrink_to_fit();
 
-        log_fatal("Unable to load g2 graphics");
+        log_fatal("Unable to load g2 graphics %s", path);
         if (!gOpenRCT2Headless)
         {
             IUiContext * uiContext = GetContext()->GetUiContext();

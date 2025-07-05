@@ -33,6 +33,8 @@ struct CursorState
     sint32  old;
     bool    touch, touchIsDouble;
     uint32  touchDownTimestamp;
+    sint32  abs_x;
+    sint32  abs_y;
 };
 
 struct TextInputSession

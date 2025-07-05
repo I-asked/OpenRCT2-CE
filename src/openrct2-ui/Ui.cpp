@@ -28,7 +28,10 @@
 using namespace OpenRCT2;
 using namespace OpenRCT2::Audio;
 using namespace OpenRCT2::Ui;
-
+#ifdef __psp2__
+int _newlib_heap_size_user   = 200 * 1024 * 1024;
+unsigned int sceLibcHeapSize = 32 * 1024 * 1024;
+#endif
 /**
  * Main entry point for non-Windows systems. Windows instead uses its own DLL proxy.
  */

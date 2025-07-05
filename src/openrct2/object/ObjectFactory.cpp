@@ -19,6 +19,7 @@
 #include "../core/Memory.hpp"
 #include "../core/MemoryStream.h"
 #include "../core/String.hpp"
+#include "../core/Zip.h"
 #include "../rct12/SawyerChunkReader.h"
 #include "BannerObject.h"
 #include "EntranceObject.h"
@@ -98,13 +99,16 @@ namespace ObjectFactory
         }
     }
 
-    Object * CreateObjectFromLegacyFile(const utf8 * path)
+    Object * CreateObjectFromLegacyFile(const utf8 * path, IZipArchive * zip)
     {
-        log_verbose("CreateObjectFromLegacyFile(\"%s\")", path);
+        
 
         Object * result = nullptr;
         try
         {
+
+            log_verbose("CreateObjectFromLegacyFile(\"%s\")", path);
+            // auto fs = zip->GetFileStream("RCT2/ObjData/BALLN.DAT");
             auto fs = FileStream(path, FILE_MODE_OPEN);
             auto chunkReader = SawyerChunkReader(&fs);
 

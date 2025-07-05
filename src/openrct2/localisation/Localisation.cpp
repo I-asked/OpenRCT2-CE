@@ -1334,7 +1334,58 @@ utf8 *win1252_to_utf8_alloc(const char *src, size_t srcMaxSize)
     sint32 actualSpace = win1252_to_utf8(result, src, stringLength, reservedSpace);
     return (utf8*)realloc(result, actualSpace);
 }
+#if defined(__psp2__)  || defined(__unix__)
+int encode_utf8(char *out, uint16_t codepoint);
+char *cp1252_to_utf8_str(const char *input);
+static const uint16_t cp1252_unicode[32] = {
+    0x20AC, 0xFFFD, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
+    0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0xFFFD, 0x017D, 0xFFFD,
+    0xFFFD, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+    0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0xFFFD, 0x017E, 0x0178
+};
+int encode_utf8(char *out, uint16_t codepoint) {
+    if (codepoint < 0x80) {
+        out[0] = codepoint;
+        return 1;
+    } else if (codepoint < 0x800) {
+        out[0] = 0xC0 | (codepoint >> 6);
+        out[1] = 0x80 | (codepoint & 0x3F);
+        return 2;
+    } else {
+        out[0] = 0xE0 | (codepoint >> 12);
+        out[1] = 0x80 | ((codepoint >> 6) & 0x3F);
+        out[2] = 0x80 | (codepoint & 0x3F);
+        return 3;
+    }
+}
 
+char *cp1252_to_utf8_str(const char *input) {
+    size_t len = strlen(input);
+    char *output = (char*)malloc(len * 3 + 1); // Worst case: each byte becomes 3 UTF-8 bytes
+    if (!output) return NULL;
+
+    char *out = output;
+
+    for (size_t i = 0; i < len; i++) {
+        uint8_t ch = (uint8_t)input[i];
+        uint16_t codepoint;
+
+        if (ch < 0x80) {
+            *out++ = ch;
+        } else if (ch >= 0x80 && ch <= 0x9F) {
+            codepoint = cp1252_unicode[ch - 0x80];
+            out += encode_utf8(out, codepoint);
+        } else {
+            // CP1252 0xA0–0xFF map directly to Unicode U+00A0–U+00FF
+            codepoint = ch;
+            out += encode_utf8(out, codepoint);
+        }
+    }
+
+    *out = '\0';
+    return output;
+}
+#endif
 sint32 win1252_to_utf8(utf8string dst, const char *src, size_t srcLength, size_t maxBufferLength)
 {
 #ifdef _WIN32
@@ -1372,6 +1423,12 @@ sint32 win1252_to_utf8(utf8string dst, const char *src, size_t srcLength, size_t
     env->DeleteLocalRef(bytes);
     env->DeleteLocalRef(jstring1);
 
+    int result = strlen(dst) + 1;
+#elif defined(__psp2__) || defined(__unix__)
+    char *buffer_conv = strndup(src, srcLength);
+    
+    char* utf = cp1252_to_utf8_str(buffer_conv);
+    strcpy(dst, utf);
     int result = strlen(dst) + 1;
 #else
     //log_warning("converting %s of size %d", src, srcLength);

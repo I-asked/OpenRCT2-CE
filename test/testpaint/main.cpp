@@ -35,6 +35,8 @@
 #include <openrct2/ride/Track.h>
 #include <openrct2/ride/TrackData.h>
 
+
+
 struct TestCase {
     uint8 rideType;
     std::vector<uint8> trackTypes;

@@ -1046,6 +1046,7 @@ static void window_options_mousedown(rct_window *w, rct_widgetindex widgetIndex,
         }
         case WIDX_SCALE_UP:
             gConfigGeneral.window_scale += 0.25f;
+            gConfigGeneral.window_scale = Math::Min(1.5f, gConfigGeneral.window_scale);
             config_save_default();
             gfx_invalidate_screen();
             context_trigger_resize();
@@ -1540,18 +1541,25 @@ static void window_options_invalidate(rct_window *w)
         }
 
         // Disable Steam Overlay checkbox when using software rendering.
+#ifndef __psp2__
         if (gConfigGeneral.drawing_engine == DRAWING_ENGINE_SOFTWARE)
         {
             w->disabled_widgets |= (1 << WIDX_STEAM_OVERLAY_PAUSE);
         }
         else
         {
+#endif
             w->disabled_widgets &= ~(1 << WIDX_STEAM_OVERLAY_PAUSE);
+#ifndef __psp2__
         }
+#endif
 
         // Disable scaling quality dropdown when using software rendering or when using an integer scalar.
         // In the latter case, nearest neighbour rendering will be used to scale.
-        if (gConfigGeneral.drawing_engine == DRAWING_ENGINE_SOFTWARE ||
+        if (
+#ifndef __psp2__
+            gConfigGeneral.drawing_engine == DRAWING_ENGINE_SOFTWARE ||
+#endif
             gConfigGeneral.window_scale == std::floor(gConfigGeneral.window_scale))
         {
             w->disabled_widgets |= (1 << WIDX_SCALE_QUALITY);
@@ -1564,14 +1572,18 @@ static void window_options_invalidate(rct_window *w)
         }
 
         // Disable changing VSync for Software engine, as we can't control its use of VSync
+#ifndef __psp2__
         if (gConfigGeneral.drawing_engine == DRAWING_ENGINE_SOFTWARE)
         {
             w->disabled_widgets |= (1 << WIDX_USE_VSYNC_CHECKBOX);
         }
         else
         {
+#endif
             w->disabled_widgets &= ~(1 << WIDX_USE_VSYNC_CHECKBOX);
+#ifndef __psp2__
         }
+#endif
 
         widget_set_checkbox_value(w, WIDX_UNCAP_FPS_CHECKBOX, gConfigGeneral.uncap_fps);
         widget_set_checkbox_value(w, WIDX_USE_VSYNC_CHECKBOX, gConfigGeneral.use_vsync);
@@ -1868,7 +1880,10 @@ static void window_options_paint(rct_window *w, rct_drawpixelinfo *dpi)
         gfx_draw_string_left(dpi, STR_WINDOW_OBJECTIVE_VALUE_RATING, &scale, w->colours[1], w->x + w->widgets[WIDX_SCALE].left + 1, w->y + w->widgets[WIDX_SCALE].top + 1);
 
         colour = w->colours[1];
-        if (gConfigGeneral.drawing_engine == DRAWING_ENGINE_SOFTWARE ||
+        if (
+#ifndef __psp2__
+            gConfigGeneral.drawing_engine == DRAWING_ENGINE_SOFTWARE ||
+#endif
             gConfigGeneral.window_scale == std::floor(gConfigGeneral.window_scale))
         {
             colour |= COLOUR_FLAG_INSET;

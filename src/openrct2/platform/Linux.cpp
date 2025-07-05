@@ -18,7 +18,7 @@
 
 // Despite the name, this file contains support for more OSs besides Linux, provided the necessary ifdefs remain small.
 // Otherwise, they should be spun off into their own files.
-#if (defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__)) && !defined(__ANDROID__)
+#if (defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__)) && !defined(__ANDROID__) || defined(__psp2__)
 
 #ifdef __FreeBSD__
 #include <sys/sysctl.h>
@@ -43,6 +43,9 @@
 #include "platform.h"
 
 uint16 platform_get_locale_language(){
+#ifdef __psp2__
+    return LANGUAGE_ENGLISH_UK;
+#else
     const char *langString = setlocale(LC_MESSAGES, "");
     if(langString != nullptr){
         // The locale has the following form:
@@ -100,9 +103,13 @@ uint16 platform_get_locale_language(){
         }
     }
     return LANGUAGE_ENGLISH_UK;
+#endif
 }
 
 uint8 platform_get_locale_currency(){
+#ifdef __psp2__
+    return platform_get_currency_value(NULL);
+#else
     char *langstring = setlocale(LC_MONETARY, "");
 
     if (langstring == nullptr) {
@@ -112,9 +119,13 @@ uint8 platform_get_locale_currency(){
     struct lconv *lc = localeconv();
 
     return platform_get_currency_value(lc->int_curr_symbol);
+#endif
 }
 
 uint8 platform_get_locale_measurement_format(){
+#ifdef __psp2__
+    return MEASUREMENT_FORMAT_METRIC;
+#else
     // LC_MEASUREMENT is GNU specific.
     #ifdef LC_MEASUREMENT
     const char *langstring = setlocale(LC_MEASUREMENT, "");
@@ -129,10 +140,14 @@ uint8 platform_get_locale_measurement_format(){
         }
     }
     return MEASUREMENT_FORMAT_METRIC;
+#endif
 }
 
 bool platform_get_steam_path(utf8 * outPath, size_t outSize)
 {
+#ifdef __psp2__
+    return false;
+#else
     const char * steamRoot = getenv("STEAMROOT");
     if (steamRoot != nullptr)
     {
@@ -175,6 +190,7 @@ bool platform_get_steam_path(utf8 * outPath, size_t outSize)
         }
     }
     return false;
+#endif
 }
 
 #ifndef NO_TTF
