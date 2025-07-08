@@ -103,7 +103,7 @@ if(APPLE)
 endif()
 
 # On mingw all code is already PIC, this will avoid compiler error on redefining this option
-if (NOT MINGW AND NOT VITA)
+if (NOT MINGW AND NOT VITA AND NOT WIIU)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif ()
 

@@ -74,6 +74,7 @@ else ()
     # Makes OpenGL function get queried in run-time rather than linked-in
     add_definitions(-DOPENGL_NO_LINK)
 endif ()
+
 if(VITA)
 target_link_libraries(${PROJECT} SDL2_image jpeg webp)
 set(VITA_APP_NAME "OpenRCT2")
@@ -85,4 +86,8 @@ vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} eboot.bin
   NAME ${VITA_APP_NAME}
   FILE cursor.png cursor.png
 )
+endif()
+
+if (WIIU)
+    wut_create_rpx(${PROJECT})
 endif()
