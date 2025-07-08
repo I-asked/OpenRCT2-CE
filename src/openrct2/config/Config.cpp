@@ -38,6 +38,10 @@
 #include "../platform/platform.h"
 #include "../scenario/Scenario.h"
 
+#ifdef __WIIU__
+#include <whb/sdcard.h>
+#endif
+
 using namespace OpenRCT2;
 using namespace OpenRCT2::Ui;
 
@@ -608,6 +612,8 @@ namespace Config
     {
 #ifdef __psp2__
         return "ux0:data/RCT2";
+#elif defined(__WIIU__)
+        return std::string(WHBGetSdCardMountPath()) + "/RCT2";
 #endif
         log_verbose("config_find_rct2_path(...)");
 
