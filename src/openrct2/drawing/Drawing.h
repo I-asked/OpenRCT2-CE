@@ -32,7 +32,6 @@ struct rct_g1_element {
     uint16 zoomed_offset;   // 0x0E
 };
 
-
 template<>
 inline constexpr rct_g1_element bswap<rct_g1_element>(const rct_g1_element &nat) {
     return rct_g1_element{
@@ -67,6 +66,19 @@ struct rct_g1_element_32bit {
     uint16 zoomed_offset;           // 0x0E
 };
 assert_struct_size(rct_g1_element_32bit, 0x10);
+
+template<>
+inline constexpr rct_g1_element_32bit bswap<rct_g1_element_32bit>(const rct_g1_element_32bit &nat) {
+    return rct_g1_element_32bit{
+        .offset = bswap(nat.offset),
+        .width = bswap(nat.width),
+        .height = bswap(nat.height),
+        .x_offset = bswap(nat.x_offset),
+        .y_offset = bswap(nat.y_offset),
+        .flags = bswap(nat.flags),
+        .zoomed_offset = bswap(nat.zoomed_offset),
+    };
+}
 
 
 enum {

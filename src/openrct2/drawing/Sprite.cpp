@@ -122,7 +122,7 @@ static void read_and_convert_gxdat(IStream * stream, size_t count, bool is_rctc,
                 rctc += 2; break;
             }
 
-            const rct_g1_element_32bit &src = g1Elements32[rctc];
+            const rct_g1_element_32bit src = bswap(g1Elements32[rctc]);
 
             // Double cast to silence compiler warning about casting to
             // pointer from integer of mismatched length.
@@ -161,7 +161,7 @@ static void read_and_convert_gxdat(IStream * stream, size_t count, bool is_rctc,
     {
         for (size_t i = 0; i < count; i++)
         {
-            const rct_g1_element_32bit &src = g1Elements32[i];
+            const rct_g1_element_32bit src = bswap(g1Elements32[i]);
 
             // Double cast to silence compiler warning about casting to
             // pointer from integer of mismatched length.
