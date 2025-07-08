@@ -22,7 +22,8 @@
 #elif defined(__ANDROID__)
 #include <jni.h>
 #include <SDL.h>
-
+#elif defined(__WIIU__)
+// ...
 #else
 #include <iconv.h>
 #include <errno.h>
@@ -1334,7 +1335,7 @@ utf8 *win1252_to_utf8_alloc(const char *src, size_t srcMaxSize)
     sint32 actualSpace = win1252_to_utf8(result, src, stringLength, reservedSpace);
     return (utf8*)realloc(result, actualSpace);
 }
-#if defined(__psp2__)  || defined(__unix__)
+#if defined(__WIIU__) || defined(__psp2__) || defined(__unix__)
 int encode_utf8(char *out, uint16_t codepoint);
 char *cp1252_to_utf8_str(const char *input);
 static const uint16_t cp1252_unicode[32] = {
@@ -1424,7 +1425,7 @@ sint32 win1252_to_utf8(utf8string dst, const char *src, size_t srcLength, size_t
     env->DeleteLocalRef(jstring1);
 
     int result = strlen(dst) + 1;
-#elif defined(__psp2__) || defined(__unix__)
+#elif defined(__WIIU__) || defined(__psp2__) || defined(__unix__)
     char *buffer_conv = strndup(src, srcLength);
     
     char* utf = cp1252_to_utf8_str(buffer_conv);

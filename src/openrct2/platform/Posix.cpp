@@ -99,7 +99,7 @@ void platform_get_time_local(rct2_time *out_time)
 static size_t platform_utf8_to_multibyte(const utf8 *path, char *buffer, size_t buffer_size)
 {
     wchar_t *wpath = utf8_to_widechar(path);
-#ifdef __psp2__
+#if defined(__psp2__) || defined(__WIIU__)
     memset(buffer, 0, buffer_size);
     strcpy(buffer, path);
     return strlen(buffer);
@@ -156,7 +156,7 @@ bool platform_original_game_data_exists(const utf8 *path)
 // "a vaporware GNU extension".
 static mode_t openrct2_getumask()
 {
-#ifdef __psp2__
+#if defined(__psp2__) || defined(__WIIU__)
     return 511;
 #else
     mode_t mask = umask(0);
@@ -414,7 +414,7 @@ time_t platform_file_get_modified_time(const utf8* path){
 
 uint8 platform_get_locale_temperature_format(){
 // LC_MEASUREMENT is GNU specific.
-#ifdef __psp2__
+#if defined(__psp2__) || defined(__WIIU__)
     return TEMPERATURE_FORMAT_C;
 #else
 #ifdef LC_MEASUREMENT
@@ -456,7 +456,7 @@ datetime64 platform_get_datetime_now_utc()
 }
 
 utf8* platform_get_username() {
-#ifdef __psp2__
+#if defined(__psp2__) || defined(__WIIU__)
     return nullptr;
 #else
     struct passwd* pw = getpwuid(getuid());
@@ -471,7 +471,7 @@ utf8* platform_get_username() {
 
 bool platform_process_is_elevated()
 {
-#if !defined(__EMSCRIPTEN__) && !defined(__psp2__)
+#if !defined(__EMSCRIPTEN__) && !defined(__psp2__) && !defined(__WIIU__)
    return (geteuid() == 0);
 #else
    return false;
