@@ -25,6 +25,10 @@
 #include "platform.h"
 #include "Platform2.h"
 
+#if defined(__WIIU__)
+#include <whb/sdcard.h>
+#endif
+
 namespace Platform
 {
     std::string GetFolderPath(SPECIAL_FOLDER folder)
@@ -37,6 +41,8 @@ namespace Platform
             {
 #ifdef __psp2__
                 auto path = "ux0:data/OpenRCT2";
+#elif defined(__WIIU__)
+                auto path = std::string(WHBGetSdCardMountPath()) + "/OpenRCT2";
 #else
                 auto path = GetEnvironmentPath("XDG_CONFIG_HOME");
                 if (path.empty())

@@ -24,6 +24,10 @@
 #include "Platform2.h"
 #include "platform.h"
 
+#if defined(__WIIU__)
+#include <whb/sdcard.h>
+#endif
+
 namespace Platform
 {
     uint32 GetTicks()
@@ -63,7 +67,7 @@ namespace Platform
 #if defined(__psp2__)
         path = "ux0:data/OpenRCT2";
 #elif defined(__WIIU__)
-        path = "/OpenRCT2";
+        path = std::string(WHBGetSdCardMountPath()) + "/OpenRCT2";
 #else
         auto pw = getpwuid(getuid());
         if (pw != nullptr)

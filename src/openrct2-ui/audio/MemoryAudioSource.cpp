@@ -121,23 +121,26 @@ namespace OpenRCT2 { namespace Audio
             {
                 uint32 numSounds;
                 SDL_RWread(rw, &numSounds, sizeof(numSounds), 1);
+                numSounds = bswap(numSounds);
                 if (index < numSounds)
                 {
                     SDL_RWseek(rw, index * 4, RW_SEEK_CUR);
 
                     uint32 pcmOffset;
                     SDL_RWread(rw, &pcmOffset, sizeof(pcmOffset), 1);
+                    pcmOffset = bswap(pcmOffset);
                     SDL_RWseek(rw, pcmOffset, RW_SEEK_SET);
 
                     uint32 pcmSize;
                     SDL_RWread(rw, &pcmSize, sizeof(pcmSize), 1);
+                    pcmSize = bswap(pcmSize);
                     _length = pcmSize;
 
                     WaveFormatEx waveFormat;
                     SDL_RWread(rw, &waveFormat, sizeof(waveFormat), 1);
-                    _format.freq = waveFormat.frequency;
+                    _format.freq = bswap(waveFormat.frequency);
                     _format.format = AUDIO_S16LSB;
-                    _format.channels = waveFormat.channels;
+                    _format.channels = bswap(waveFormat.channels);
 
                     try
                     {
