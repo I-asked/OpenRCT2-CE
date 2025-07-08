@@ -16,6 +16,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <sstream>
 #include "Diagnostic.h"
 
 #ifdef __ANDROID__
@@ -73,6 +74,18 @@ void diagnostic_log_with_location(DIAGNOSTIC_LEVEL diagnosticLevel, const char *
 
 #else
 
+#ifdef __WIIU__
+
+const char * _level_strings[5] = {
+    "FATAL",
+    "ERROR",
+    "WARNING",
+    "VERBOSE",
+    "INFO"
+};
+
+#else
+
 static constexpr const char * _level_strings[] = {
     "FATAL",
     "ERROR",
@@ -101,6 +114,8 @@ void diagnostic_log(DIAGNOSTIC_LEVEL diagnosticLevel, const char *format, ...)
     // Line terminator
     fprintf(stream, "\n");
 }
+
+#endif
 
 void diagnostic_log_with_location(DIAGNOSTIC_LEVEL diagnosticLevel, const char *file, const char *function, sint32 line, const char *format, ...)
 {

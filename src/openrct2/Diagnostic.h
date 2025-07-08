@@ -19,6 +19,10 @@
 
 #include "common.h"
 
+#ifdef __WIIU__
+#include <coreinit/debug.h>
+#endif
+
 enum DIAGNOSTIC_LEVEL {
     DIAGNOSTIC_LEVEL_FATAL,
     DIAGNOSTIC_LEVEL_ERROR,
@@ -77,7 +81,20 @@ enum DIAGNOSTIC_LEVEL {
 
 extern bool _log_levels[DIAGNOSTIC_LEVEL_COUNT];
 
+#ifdef __WIIU__
+extern const char * _level_strings[DIAGNOSTIC_LEVEL_COUNT]; \
+
+#define diagnostic_log(lv, fmt, ...) \
+  do { \
+    if (::_log_levels[lv]) { \
+      OSReport("%s: ", ::_level_strings[lv]); \
+      OSReport(fmt, ##__VA_ARGS__); \
+      OSReport("\n"); \
+    } \
+  } while (0)
+#else
 void diagnostic_log(DIAGNOSTIC_LEVEL diagnosticLevel, const char *format, ...);
+#endif
 void diagnostic_log_with_location(DIAGNOSTIC_LEVEL diagnosticLevel, const char *file, const char *function, sint32 line, const char *format, ...);
 
 #ifdef _MSC_VER

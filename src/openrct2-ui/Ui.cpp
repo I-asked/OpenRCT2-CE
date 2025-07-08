@@ -25,6 +25,11 @@
 
 #include <openrct2/platform/platform.h>
 
+#ifdef __WIIU__
+#include <whb/proc.h>
+#include <whb/sdcard.h>
+#endif
+
 using namespace OpenRCT2;
 using namespace OpenRCT2::Audio;
 using namespace OpenRCT2::Ui;
@@ -41,6 +46,13 @@ int NormalisedMain(int argc, const char * * argv)
 int main(int argc, const char * * argv)
 #endif
 {
+#ifdef __WIIU__
+    WHBProcInit();
+    WHBMountSdCard();
+#endif
+
+    OSReport("Booting #1\n");
+    log_info("Booting");
     int runGame = cmdline_run(argv, argc);
     core_init();
     if (runGame == 1)

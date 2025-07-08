@@ -16,8 +16,7 @@
 
 #if defined(__WIIU__)
 
-// #include <limits.h>
-// #include <pwd.h>
+#include <whb/sdcard.h>
 #include "../core/Path.hpp"
 #include "../core/Util.hpp"
 #include "../OpenRCT2.h"
@@ -34,7 +33,7 @@ namespace Platform
         case SPECIAL_FOLDER::USER_CONFIG:
         case SPECIAL_FOLDER::USER_DATA:
             {
-                auto path = "/OpenRCT2";
+                auto path = std::string(WHBGetSdCardMountPath()) + "/OpenRCT2";
                 return path;
             }
 
@@ -51,17 +50,17 @@ namespace Platform
 
     static std::string FindInstallPath()
     {
-        return std::string("/RCT2");
+        return std::string(WHBGetSdCardMountPath()) + "/RCT2";
     }
 
     static std::string GetCurrentWorkingDirectory()
     {
-        return std::string("/OpenRCT2");
+        return std::string(WHBGetSdCardMountPath()) + "/OpenRCT2";
     }
 
     std::string GetInstallPath()
     {
-        auto path = std::string("/OpenRCT2");
+        auto path = std::string(WHBGetSdCardMountPath()) + "/OpenRCT2";
 
         return path;
     }

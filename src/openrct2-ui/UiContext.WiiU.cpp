@@ -24,6 +24,7 @@
 #include "UiContext.h"
 
 #include <SDL.h>
+#include <whb/sdcard.h>
 
 namespace OpenRCT2 { namespace Ui
     {
@@ -65,7 +66,7 @@ namespace OpenRCT2 { namespace Ui
                 log_info(title.c_str());
                 STUB();
 
-                return "/OpenRCT2";
+                return std::string(WHBGetSdCardMountPath()) + "/OpenRCT2";
             }
         };
 
