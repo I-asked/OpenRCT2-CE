@@ -14,14 +14,14 @@
  *****************************************************************************/
 #pragma endregion
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__) || defined(__psp2__)
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__) || defined(__psp2__) || defined(__WIIU__)
 
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fnmatch.h>
-#if !defined(__EMSCRIPTEN__) && !defined(__psp2__)
+#if !defined(__EMSCRIPTEN__) && !defined(__psp2__) && !defined(__WIIU__)
     #include <fts.h>
 #endif
 #include <libgen.h>

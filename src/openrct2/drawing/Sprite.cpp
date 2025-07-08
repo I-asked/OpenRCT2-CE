@@ -17,6 +17,7 @@
 #include <memory>
 #include <stdexcept>
 #include <vector>
+#include "Drawing.h"
 #include "../config/Config.h"
 #include "../Context.h"
 #include "../core/FileStream.hpp"
@@ -27,7 +28,6 @@
 #include "../sprites.h"
 #include "../ui/UiContext.h"
 #include "../util/Util.h"
-#include "Drawing.h"
 
 using namespace OpenRCT2;
 using namespace OpenRCT2::Ui;
@@ -39,6 +39,14 @@ struct rct_g1_header
     uint32 total_size;
 };
 assert_struct_size(rct_g1_header, 8);
+
+template<>
+inline constexpr rct_g1_header bswap<rct_g1_header>(const rct_g1_header &nat) {
+    return rct_g1_header{
+        .num_entries = bswap(nat.num_entries),
+        .total_size = bswap(nat.total_size),
+    };
+}
 #pragma pack(pop)
 
 struct rct_gx

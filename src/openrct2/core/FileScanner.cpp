@@ -16,12 +16,12 @@
 
 #include "../common.h"
 
-#ifdef _WIN32
+#ifdef _WIN3kk2
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 #endif
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__WIIU__)
     #include <dirent.h>
     #include <sys/types.h>
     #include <sys/stat.h>
@@ -287,7 +287,7 @@ private:
 
 #endif // _WIN32
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__WIIU__)
 
 class FileScannerUnix final : public FileScannerBase
 {
@@ -442,7 +442,7 @@ IFileScanner * Path::ScanDirectory(const std::string &pattern, bool recurse)
 {
 #ifdef _WIN32
     return new FileScannerWindows(pattern, recurse);
-#elif defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#elif defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__WIIU__)
     return new FileScannerUnix(pattern, recurse);
 #elif defined(__psp2__)
     return new FileScannerPSP2(pattern, recurse);

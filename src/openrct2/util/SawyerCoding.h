@@ -25,6 +25,14 @@ struct sawyercoding_chunk_header {
     uint32 length;
 };
 assert_struct_size(sawyercoding_chunk_header, 5);
+
+template<>
+inline constexpr sawyercoding_chunk_header bswap<sawyercoding_chunk_header>(const sawyercoding_chunk_header &nat) {
+    return sawyercoding_chunk_header{
+        .encoding = nat.encoding,
+        .length = bswap(nat.length),
+    };
+}
 #pragma pack(pop)
 
 

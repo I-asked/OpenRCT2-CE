@@ -34,6 +34,35 @@
 #include <cstdlib>
 #include <cstring>
 
+#include <type_traits>
+
+template <typename T>
+static constexpr inline T bswap(const T &value) {
+  static_assert(std::is_pointer<T>::value || std::is_arithmetic<T>::value, "std::is_arithmetic<T>");
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "sizeof(T)");
+#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+  if constexpr (std::is_pointer<T>::value) {
+    if constexpr (sizeof(T) == 4) {
+      return (T)__builtin_bswap32((uintptr_t)value);
+    } else {
+      return (T)__builtin_bswap64((uintptr_t)value);
+    }
+  } else if constexpr (sizeof(T) == 1) {
+    return value;
+  } else if constexpr (sizeof(T) == 2) {
+    return __builtin_bswap16(value);
+  } else if constexpr (sizeof(T) == 4) {
+    return __builtin_bswap32(value);
+  } else if constexpr (sizeof(T) == 8) {
+    return __builtin_bswap64(value);
+  } else {
+    static_assert(false, "T");
+  }
+#else
+  return value;
+#endif
+}
+
 using sint8 = int8_t;
 using sint16 = int16_t;
 using sint32 = int32_t;
@@ -42,6 +71,8 @@ using uint8 = uint8_t;
 using uint16 = uint16_t;
 using uint32 = uint32_t;
 using uint64 = uint64_t;
+using soff = intptr_t;
+using uoff = uintptr_t;
 
 #include "Diagnostic.h"
 
@@ -80,23 +111,25 @@ using colour_t = uint8;
 // Gets the name of a symbol as a C string
 #define nameof(symbol) #symbol
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__psp2__)
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__psp2__) || defined(__WIIU__)
 #include <unistd.h>
 #define STUB() log_warning("Function %s at %s:%d is a stub.\n", __PRETTY_FUNCTION__, __FILE__, __LINE__)
 #define _strcmpi _stricmp
 #define _stricmp(x, y) strcasecmp((x), (y))
 #define _strnicmp(x, y, n) strncasecmp((x), (y), (n))
 #define _strdup(x) strdup((x))
+#define ftello64 ftello
+#define fseeko64 fseeko
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define RCT2_ENDIANESS __ORDER_LITTLE_ENDIAN__
 #define LOBYTE(w) ((uint8)(w))
 #define HIBYTE(w) ((uint8)(((uint16)(w)>>8)&0xFF))
-#endif // __BYTE_ORDER__
-
-#ifndef RCT2_ENDIANESS
-#error Unknown endianess!
-#endif // RCT2_ENDIANESS
+#else
+#define RCT2_ENDIANESS __ORDER_BIG_ENDIAN__
+#define LOBYTE(w) ((uint8)(((uint16)(w)>>8)&0xFF))
+#define HIBYTE(w) ((uint8)(w))
+#endif
 
 #endif // defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 

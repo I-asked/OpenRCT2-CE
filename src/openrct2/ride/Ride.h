@@ -71,6 +71,10 @@ struct vehicle_colour {
     uint8 additional_2;
 };
 assert_struct_size(vehicle_colour, 3);
+template<>
+inline constexpr vehicle_colour bswap<vehicle_colour>(const vehicle_colour &nat) {
+    return nat;
+}
 
 struct track_colour_preset_list {
     uint8 count;

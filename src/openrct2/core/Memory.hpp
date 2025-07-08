@@ -62,7 +62,9 @@ namespace Memory
         {
             result = (T*)realloc((void*)ptr, size);
         }
+#if 0
         Guard::ArgumentNotNull(result, "Failed to reallocate %x (%s) to have %u bytes", ptr, typeid(T).name(), size);
+#endif
         return result;
     }
 

@@ -515,7 +515,7 @@ private:
         try
         {
             auto fs = FileStream(path, FILE_MODE_WRITE);
-            fs.Write(entry, sizeof(rct_object_entry));
+            fs.WriteValue<rct_object_entry>(*entry);
             fs.Write(encodedDataBuffer, encodedDataSize);
 
             Memory::Free(encodedDataBuffer);

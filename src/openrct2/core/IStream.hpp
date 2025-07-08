@@ -75,21 +75,22 @@ interface IStream
     /**
      * Reads the given type from the stream. Use this only for small types (e.g. sint8, sint64, double)
      */
-    template<typename T>
+    template<typename T, auto Swap = bswap<T>>
     T ReadValue()
     {
         T buffer;
         Read(&buffer);
-        return buffer;
+        return Swap(buffer);
     }
 
     /**
      * Writes the given type to the stream. Use this only for small types (e.g. sint8, sint64, double)
      */
-    template<typename T>
+    template<typename T, auto Swap = bswap<T>>
     void WriteValue(const T value)
     {
-        Write(&value);
+        const T swapped = Swap(value);
+        Write(&swapped);
     }
 
     template<typename T>

@@ -104,7 +104,7 @@ if (NOT DISABLE_NETWORK)
     endif ()
 endif ()
 
-if (NOT APPLE AND NOT MINGW AND NOT VITA)
+if (NOT APPLE AND NOT MINGW AND NOT VITA AND NOT WIIU)
     # This is ugly hack to work around https://bugs.launchpad.net/ubuntu/+source/gcc-5/+bug/1568899.
     # Once C++17 is enabled (and thus old compilers are no longer supported, this needs to be gone.
     # We cannot simply detect the _compiler_ version, as the bug exists with the C++ _library_

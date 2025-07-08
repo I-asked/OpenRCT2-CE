@@ -33,7 +33,7 @@
     #else
         #define OPENRCT2_ARCHITECTURE   "arm"
     #endif
-#elif defined(__powerpc__) || defined(_M_PPC)
+#elif defined(__powerpc__) || defined(_M_PPC) || defined(__WIIU__)
     #define OPENRCT2_ARCHITECTURE       "PowerPC"
 #elif defined(__mips64)
     #define OPENRCT2_ARCHITECTURE       "mips64"
@@ -72,6 +72,9 @@
 #endif
 #ifdef __psp2__
     #define OPENRCT2_PLATFORM       "PS Vita"
+#endif
+#ifdef __WIIU__
+    #define OPENRCT2_PLATFORM       "Wii U"
 #endif
 #ifndef OPENRCT2_PLATFORM
     #error Unknown platform!

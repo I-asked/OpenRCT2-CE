@@ -279,6 +279,16 @@ struct rct_scores_header
 };
 assert_struct_size(rct_scores_header, 0x10);
 
+template<>
+inline constexpr rct_scores_header bswap<rct_scores_header>(const rct_scores_header &nat) {
+    return rct_scores_header{
+        .var_0 = bswap(nat.var_0),
+        .var_4 = bswap(nat.var_4),
+        .var_8 = bswap(nat.var_8),
+        .ScenarioCount = bswap(nat.ScenarioCount),
+    };
+}
+
 /**
  * An entry of scores.dat
  * size: 0x02B0
@@ -299,6 +309,16 @@ struct rct_scores_entry
     char    CompletedBy[64];
 };
 assert_struct_size(rct_scores_entry, 0x02B0);
+
+template<>
+inline constexpr rct_scores_entry bswap<rct_scores_entry>(const rct_scores_entry &nat) {
+    auto swp = nat;
+    swp.objectiveArg2 = bswap(swp.objectiveArg2);
+    swp.objectiveArg3 = bswap(swp.objectiveArg3);
+    swp.Flags = bswap(swp.Flags);
+    swp.CompanyValue = bswap(swp.CompanyValue);
+    return swp;
+}
 
 #pragma pack(pop)
 

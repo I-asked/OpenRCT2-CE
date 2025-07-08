@@ -88,6 +88,11 @@ struct rct_object_entry {
 };
 assert_struct_size(rct_object_entry, 0x10);
 
+template<>
+inline constexpr rct_object_entry bswap<rct_object_entry>(const rct_object_entry &nat) {
+    return nat;
+}
+
 struct rct_object_entry_group {
     void **chunks;
     rct_object_entry *entries;

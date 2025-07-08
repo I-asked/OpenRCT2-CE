@@ -60,6 +60,16 @@ struct rct_large_scenery_tile {
 };
 assert_struct_size(rct_large_scenery_tile, 9);
 
+template<>
+inline constexpr rct_large_scenery_tile bswap<rct_large_scenery_tile>(const rct_large_scenery_tile &nat) {
+    return rct_large_scenery_tile{
+        .x_offset = bswap(nat.x_offset),
+        .y_offset = bswap(nat.y_offset),
+        .z_offset = bswap(nat.z_offset),
+        .var_7 = bswap(nat.var_7),
+    };
+}
+
 struct rct_large_scenery_text_glyph {
     uint8 image_offset;
     uint8 width;

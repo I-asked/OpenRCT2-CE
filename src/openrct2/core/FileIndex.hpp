@@ -27,41 +27,59 @@
 #include "MemoryStream.h"
 #include "Path.hpp"
 
+struct DirectoryStats
+{
+    uint32 TotalFiles = 0;
+    uint64 TotalFileSize = 0;
+    uint32 FileDateModifiedChecksum = 0;
+    uint32 PathChecksum = 0;
+};
+
+struct ScanResult
+{
+    DirectoryStats const Stats;
+    std::vector<std::string> const Files;
+
+    ScanResult(DirectoryStats stats, std::vector<std::string> files)
+        : Stats(stats),
+          Files(files)
+    {
+    }
+};
+
+struct FileIndexHeader
+{
+    uint32          HeaderSize = sizeof(FileIndexHeader);
+    uint32          MagicNumber = 0;
+    uint8           VersionA = 0;
+    uint8           VersionB = 0;
+    uint16          LanguageId = 0;
+    DirectoryStats  Stats;
+    uint32          NumItems = 0;
+};
+
+template<>
+inline constexpr FileIndexHeader bswap<FileIndexHeader>(const FileIndexHeader &nat) {
+    return FileIndexHeader{
+        .HeaderSize = bswap(nat.HeaderSize),
+        .MagicNumber = bswap(nat.MagicNumber),
+        .VersionA = nat.VersionA,
+        .VersionB = nat.VersionB,
+        .LanguageId = bswap(nat.LanguageId),
+        .Stats = DirectoryStats{
+            .TotalFiles = bswap(nat.Stats.TotalFiles),
+            .TotalFileSize = bswap(nat.Stats.TotalFileSize),
+            .FileDateModifiedChecksum = bswap(nat.Stats.FileDateModifiedChecksum),
+            .PathChecksum = bswap(nat.Stats.PathChecksum),
+        },
+        .NumItems = bswap(nat.NumItems),
+    };
+}
+
 template<typename TItem>
 class FileIndex
 {
 private:
-    struct DirectoryStats
-    {
-        uint32 TotalFiles = 0;
-        uint64 TotalFileSize = 0;
-        uint32 FileDateModifiedChecksum = 0;
-        uint32 PathChecksum = 0;
-    };
-
-    struct ScanResult
-    {
-        DirectoryStats const Stats;
-        std::vector<std::string> const Files;
-
-        ScanResult(DirectoryStats stats, std::vector<std::string> files)
-            : Stats(stats),
-              Files(files)
-        {
-        }
-    };
-
-    struct FileIndexHeader
-    {
-        uint32          HeaderSize = sizeof(FileIndexHeader);
-        uint32          MagicNumber = 0;
-        uint8           VersionA = 0;
-        uint8           VersionB = 0;
-        uint16          LanguageId = 0;
-        DirectoryStats  Stats;
-        uint32          NumItems = 0;
-    };
-
     // Index file format version which when incremented forces a rebuild
     static constexpr uint8 FILE_INDEX_VERSION = 4;
 

@@ -17,11 +17,13 @@
 #ifndef _DRAWING_H_
 #define _DRAWING_H_
 
+#include <cstdint>
+
 #include "../common.h"
 #include "../interface/Colour.h"
 
 struct rct_g1_element {
-    uint8* offset;          // 0x00
+    uint8 *offset;            // 0x00
     sint16 width;           // 0x04
     sint16 height;          // 0x06
     sint16 x_offset;        // 0x08
@@ -29,6 +31,21 @@ struct rct_g1_element {
     uint16 flags;           // 0x0C
     uint16 zoomed_offset;   // 0x0E
 };
+
+
+template<>
+inline constexpr rct_g1_element bswap<rct_g1_element>(const rct_g1_element &nat) {
+    return rct_g1_element{
+        .offset = bswap(nat.offset),
+        .width = bswap(nat.width),
+        .height = bswap(nat.height),
+        .x_offset = bswap(nat.x_offset),
+        .y_offset = bswap(nat.y_offset),
+        .flags = bswap(nat.flags),
+        .zoomed_offset = bswap(nat.zoomed_offset),
+    };
+}
+
 
 struct rct_drawpixelinfo {
     uint8* bits;        // 0x00
