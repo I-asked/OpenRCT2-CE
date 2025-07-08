@@ -51,8 +51,6 @@ int main(int argc, const char * * argv)
     WHBMountSdCard();
 #endif
 
-    OSReport("Booting #1\n");
-    log_info("Booting");
     int runGame = cmdline_run(argv, argc);
     core_init();
     if (runGame == 1)
