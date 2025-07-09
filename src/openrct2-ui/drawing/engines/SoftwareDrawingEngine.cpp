@@ -164,7 +164,7 @@ private:
 
             // then scale to window size. Without changing to RGBA first, SDL complains
             // about blit configurations being incompatible.
-            if (SDL_BlitScaled(_surface, nullptr, SDL_GetWindowSurface(_window), nullptr))
+            if (SDL_BlitScaled(_RGBASurface, nullptr, SDL_GetWindowSurface(_window), nullptr))
             {
                 log_fatal("SDL_BlitScaled %s", SDL_GetError());
                 exit(1);

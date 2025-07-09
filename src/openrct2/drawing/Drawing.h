@@ -32,6 +32,7 @@ struct rct_g1_element {
     uint16 zoomed_offset;   // 0x0E
 };
 
+#if 0
 template<>
 inline constexpr rct_g1_element bswap<rct_g1_element>(const rct_g1_element &nat) {
     return rct_g1_element{
@@ -44,6 +45,7 @@ inline constexpr rct_g1_element bswap<rct_g1_element>(const rct_g1_element &nat)
         .zoomed_offset = bswap(nat.zoomed_offset),
     };
 }
+#endif
 
 
 struct rct_drawpixelinfo {

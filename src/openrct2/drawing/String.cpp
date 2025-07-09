@@ -232,7 +232,7 @@ static void colour_char(uint8 colour, const uint16* current_font_flags, uint8* p
     const rct_g1_element * g1 = gfx_get_g1_element(SPR_TEXT_PALETTE);
     if (g1 != nullptr)
     {
-        colour32 = ((uint32 *)g1->offset)[colour & 0xFF];
+        colour32 = bswap(((uint32 *)g1->offset)[colour & 0xFF]);
     }
 
     if (!(*current_font_flags & 2))

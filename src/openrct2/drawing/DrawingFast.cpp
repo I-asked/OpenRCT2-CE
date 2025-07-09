@@ -50,7 +50,7 @@ static void FASTCALL DrawRLESprite2(const uint8* RESTRICT source_bits_pointer,
 
         //The first part of the source pointer is a list of offsets to different lines
         //This will move the pointer to the correct source line.
-        const uint8 *lineData = source_bits_pointer + ((uint16*)source_bits_pointer)[y];
+        const uint8 *lineData = source_bits_pointer + bswap(((uint16*)source_bits_pointer)[y]);
         uint8* loop_dest_pointer = dest_bits_pointer + line_width * (i >> zoom_level);
 
         uint8 isEndOfLine = 0;
